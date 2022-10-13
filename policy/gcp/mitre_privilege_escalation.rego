@@ -1,0 +1,50 @@
+package mitre_privilege_escalation
+
+import future.keywords.in
+
+violation[{"msg": msg, "details": {"project": project, "actor": actor, "method": method, "permission": permission, "granted": granted, "resource": resource}}] {
+	actor = input.protoPayload.authenticationInfo.principalEmail
+
+	permissions_and_methods = [
+		"cloudfunctions.functions.create",
+		"cloudfunctions.functions.update",
+		"projects.locations.functions.patch",
+		"run.services.create",
+		"run.routes.invoke",
+		"dataproc.clusters.create,",
+		"dataflow.jobs.create,",
+		"dataflow.jobs.updateContentsiam,",
+		"composer.environments.create",
+		"iam.serviceAccounts.actAs",
+		"iam.serviceAccounts.getAccessToken",
+		"iam.serviceAccountKeys.implicitDelegation",
+		"iam.serviceAccountKeys.create",
+		"iam.serviceAccounts.signJwt",
+		"iam.roles.update",
+		"**.setIamPolicy",
+		"**.setIamPermissions",
+	]
+
+	permission = input.protoPayload.authorizationInfo[_].permission
+	method = input.protoPayload.methodName
+	true in [glob.match(permissions_and_methods[_], [], permission), glob.match(permissions_and_methods[_], [], method)]
+
+	granted = input.protoPayload.authorizationInfo[_].granted
+	resource = input.protoPayload.authorizationInfo[_].resource
+	project = input.resource.labels.project_id
+
+	msg = "possible privilege escalation attempt"
+}
+
+violation[{"msg": msg, "details": {"project": project, "actor": actor, "method": method, "permission": permission, "granted": granted, "resource": resource}}] {
+	actor = input.protoPayload.authenticationInfo.principalEmail
+	permission = input.protoPayload.authorizationInfo[_].permission
+	method = input.protoPayload.methodName
+	granted = input.protoPayload.authorizationInfo[_].granted
+	resource = input.protoPayload.authorizationInfo[_].resource
+	project = input.resource.labels.project_id
+
+	granted == false
+
+	msg = "possible privilege escalation attempt denied"
+}

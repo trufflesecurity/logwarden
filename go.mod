@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	cloud.google.com/go/pubsub v1.25.1
-	github.com/kr/pretty v0.3.1
+	github.com/fatih/color v1.13.0
 	github.com/open-policy-agent/opa v0.45.0
 	github.com/trufflesecurity/trufflehog/v3 v3.14.0
 	golang.org/x/text v0.3.7
@@ -33,11 +33,12 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.1 // indirect
 	github.com/joho/godotenv v1.4.0 // indirect
-	github.com/kr/text v0.2.0 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0 // indirect
-	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/tailscale/depaware v0.0.0-20210622194025-720c4b409502 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect

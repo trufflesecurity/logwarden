@@ -100,6 +100,9 @@ func sendSlackWebhook(ctx context.Context, res result) error {
 
 	var details string
 	for k, v := range res.Details {
+		if k == "link" {
+			v = fmt.Sprintf("<%s|stackdriver>", v)
+		}
 		details += fmt.Sprintf("*%s*: %v\n", cases.Title(language.AmericanEnglish).String(k), v)
 	}
 

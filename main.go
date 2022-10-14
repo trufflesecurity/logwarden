@@ -29,7 +29,7 @@ var (
 
 	// outputs
 	slackWebhookOut = app.Flag("slack-webhook", "Enable Slack webhook.").Bool()
-	webhookOut      = app.Flag("webhook", "Enable HTTP webhook output.").Bool()
+	webhookOut      = app.Flag("webhook", "Enable JSON HTTP POST webhook output.").Bool()
 )
 
 func main() {

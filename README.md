@@ -6,6 +6,38 @@ Some amount of policy coverage for MITRE ATT&CK Tactics are included.
 
 ![Slack alerts created by gcp-auditor](resources/slack_alerts.png)
 
+## Usage
+
+```bash
+$ gcp-auditor --help
+usage: gcp-auditor --project=PROJECT --subscription=SUBSCRIPTION [<flags>]
+
+GCP Auditor is a tool to audit GCP logs against a set of rego policies.
+
+Flags:
+  --help                       Show context-sensitive help (also try --help-long and --help-man).
+  --policies="policy"          Path to policies folder.
+  --project=PROJECT            GCP Project ID.
+  --subscription=SUBSCRIPTION  Pub/Sub subscription to audit.
+  --secret-name="gcp-auditor"  GCP Secret name to use for GCP Auditor.
+  --json                       Output results as JSON.
+  --slack-webhook              Enable Slack webhook.
+  --webhook                    Enable JSON HTTP POST webhook output.
+```
+
+### GCP Secret format
+
+```
+SLACK_WEBHOOK=https://hooks.slack.com/services/TELXXXXXX/XXXXXXXXX/XXXXXXXXXXXXXXXXX
+
+WEBHOOK_URL=https://your.server/post
+```
+
+## Installation
+
+### Terraform (TODO)
+
+
 ## MITRE ATT&CK Tactics
 
 [Source](https://attack.mitre.orghttps://attack.mitre.org/tactics/enterprise/)

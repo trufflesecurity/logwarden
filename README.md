@@ -4,6 +4,8 @@ Process all of your GCP audit logs against OPA Rego policies and alert for viola
 
 Some amount of policy coverage for MITRE ATT&CK Tactics are included.
 
+![Slack alerts created by gcp-auditor](resources/slack_alerts.png)
+
 ## MITRE ATT&CK Tactics
 
 [Source](https://attack.mitre.orghttps://attack.mitre.org/tactics/enterprise/)

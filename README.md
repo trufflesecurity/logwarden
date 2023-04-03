@@ -35,6 +35,9 @@ WEBHOOK_URL=https://your.server/post
 
 ## Installation
 
+GCP-Auditor requires your audit logs to be published to GCP pub/sub via a logging sink.
+We've provided terraform code to deploy GCP-Auditor via Cloud Run, create organization logging sink, a pub/sub topic+subscription, and configure IAM for them to work together.
+
 ### Terraform (TODO)
 
 

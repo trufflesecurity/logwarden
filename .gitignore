@@ -1,2 +1,4 @@
 our_policies
 testdata
+.terraform
+.terraform.lock.hcl

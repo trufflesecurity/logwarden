@@ -5,6 +5,7 @@ import future.keywords.in
 violation[{"msg": msg, "details": {"project": project, "actor": actor, "method": method, "permission": permission, "granted": granted, "resource": resource, "link": link}}] {
 	actor = input.protoPayload.authenticationInfo.principalEmail
 
+	# add relevant permissions or methods here
 	permissions_and_methods = [
 		# "disks.createSnapshots",
 	]

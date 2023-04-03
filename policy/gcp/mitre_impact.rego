@@ -18,5 +18,5 @@ violation[{"msg": msg, "details": {"project": project, "actor": actor, "method":
 	insertId = input.insertId
 	timestamp = input.timestamp
 	link = sprintf("https://console.cloud.google.com/logs/query;query=%s;timeRange=PT1H;cursorTimestamp=%s?project=%s", [urlquery.encode(sprintf("insertId=\"%s\"\ntimestamp=\"%s\"", [insertId, timestamp])), timestamp, project])
-	msg = "possible impact / disruption attempt"
+	msg = "possible impact attempt"
 }

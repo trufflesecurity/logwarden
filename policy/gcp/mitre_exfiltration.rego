@@ -27,7 +27,7 @@ violation[{"msg": msg, "details": {"project": project, "actor": actor, "method":
 	msg = "possible data exfiltration attempt"
 }
 
-violation[{"msg": msg, "details": {"project": project, "actor": actor, "method": method, "permission": permission, "granted": granted, "resource": resource, "member": member}}] {
+violation[{"msg": msg, "details": {"project": project, "actor": actor, "method": method, "permission": permission, "granted": granted, "resource": resource, "member": member, "link": link}}] {
 	actor = input.protoPayload.authenticationInfo.principalEmail
 	permission = input.protoPayload.authorizationInfo[_].permission
 	method = input.protoPayload.methodName

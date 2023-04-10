@@ -10,7 +10,7 @@ builds:
     - arm64
 dockers:
   - image_templates: ["trufflesecurity/{{ .ProjectName }}:{{ .Version }}-amd64"]
-    dockerfile: Dockerfile.goreleaser
+    dockerfile: Dockerfile
     use: buildx
     build_flag_templates:
     - --platform=linux/amd64

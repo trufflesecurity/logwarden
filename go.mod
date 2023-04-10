@@ -5,7 +5,7 @@ go 1.19
 require (
 	cloud.google.com/go/pubsub v1.30.0
 	github.com/fatih/color v1.15.0
-	github.com/open-policy-agent/opa v0.45.0
+	github.com/open-policy-agent/opa v0.51.0
 	github.com/trufflesecurity/trufflehog/v3 v3.31.4
 	golang.org/x/text v0.9.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
@@ -54,7 +54,7 @@ require (
 	google.golang.org/api v0.114.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230320184635-7606e756e683 // indirect
-	google.golang.org/grpc v1.53.0 // indirect
+	google.golang.org/grpc v1.54.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

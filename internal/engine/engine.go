@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -155,7 +154,7 @@ func compiler(directory string) (*ast.Compiler, error) {
 	}
 
 	for _, fn := range policyFilenames {
-		contents, err := ioutil.ReadFile(fn)
+		contents, err := os.ReadFile(fn)
 		if err != nil {
 			return nil, err
 		}

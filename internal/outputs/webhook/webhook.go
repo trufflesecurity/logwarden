@@ -29,10 +29,11 @@ func (o Webhook) Send(ctx context.Context, res result.Result) error {
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{Timeout: time.Second * 10}
-	_, err = client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
+	_ = resp.Body.Close()
 
 	return nil
 }

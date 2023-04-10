@@ -38,12 +38,13 @@ func (o Slack) Send(ctx context.Context, res result.Result) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.Post(o.WebhookURL, "application/json", bytes.NewBuffer(body))
+	resp, err := http.Post(o.WebhookURL, "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
-	if req.StatusCode != 200 {
-		return fmt.Errorf("status code %d", req.StatusCode)
+	_ = resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("status code %d", resp.StatusCode)
 	}
 	return nil
 }

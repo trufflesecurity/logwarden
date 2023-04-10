@@ -3,10 +3,11 @@ package human
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/trufflesecurity/gcp-auditor/internal/result"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 var (
@@ -31,7 +32,7 @@ func (o Human) Send(ctx context.Context, res result.Result) error {
 			continue
 		}
 
-		printer.Printf("%s: %v\n", strings.Title(k), whitePrinter.Sprint(v))
+		printer.Printf("%s: %v\n", cases.Title(language.English).String(k), whitePrinter.Sprint(v))
 	}
 	fmt.Println("")
 

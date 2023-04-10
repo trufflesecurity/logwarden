@@ -65,7 +65,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	go eng.Alert(ctx)
+	go func() {
+		err := eng.Alert(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	err = eng.Subscribe(ctx, *project, *subscription)
 	if err != nil {

@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/pubsub v1.30.0
 	github.com/fatih/color v1.15.0
 	github.com/open-policy-agent/opa v0.51.0
-	github.com/trufflesecurity/trufflehog/v3 v3.31.4
+	github.com/trufflesecurity/trufflehog/v3 v3.31.6
 	golang.org/x/text v0.9.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )
@@ -46,10 +46,10 @@ require (
 	github.com/yashtewari/glob-intersection v0.1.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/mod v0.9.0 // indirect
-	golang.org/x/net v0.8.0 // indirect
-	golang.org/x/oauth2 v0.6.0 // indirect
+	golang.org/x/net v0.9.0 // indirect
+	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/sys v0.7.0 // indirect
 	golang.org/x/tools v0.7.0 // indirect
 	google.golang.org/api v0.114.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

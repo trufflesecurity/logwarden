@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/trufflesecurity/gcp-auditor/internal/result"
+	"github.com/trufflesecurity/logwarden/internal/result"
 )
 
 type JSON struct {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/fatih/color"
-	"github.com/trufflesecurity/gcp-auditor/internal/result"
+	"github.com/trufflesecurity/logwarden/internal/result"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )

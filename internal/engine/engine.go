@@ -12,8 +12,8 @@ import (
 	"cloud.google.com/go/pubsub"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
-	"github.com/trufflesecurity/gcp-auditor/internal/outputs"
-	"github.com/trufflesecurity/gcp-auditor/internal/result"
+	"github.com/trufflesecurity/logwarden/internal/outputs"
+	"github.com/trufflesecurity/logwarden/internal/result"
 )
 
 func New(ctx context.Context, policyPath string, outputs []outputs.Output) (*engine, error) {

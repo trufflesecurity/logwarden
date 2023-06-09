@@ -1,4 +1,4 @@
-module github.com/trufflesecurity/gcp-auditor
+module github.com/trufflesecurity/logwarden
 
 go 1.19
 

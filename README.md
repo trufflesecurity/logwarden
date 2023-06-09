@@ -1,16 +1,16 @@
-# gcp-auditor
+# logwarden
 
 Process all of your GCP audit logs against OPA Rego policies and alert for violations in real-time.
 
 Some amount of policy coverage for MITRE ATT&CK Tactics are included.
 
-![Slack alerts created by gcp-auditor](resources/slack_alerts.png)
+![Slack alerts created by logwarden](resources/slack_alerts.png)
 
 ## Usage
 
 ```bash
-$ gcp-auditor --help
-usage: gcp-auditor --project=PROJECT --subscription=SUBSCRIPTION [<flags>]
+$ logwarden --help
+usage: logwarden --project=PROJECT --subscription=SUBSCRIPTION [<flags>]
 
 GCP Auditor is a tool to audit GCP logs against a set of rego policies.
 
@@ -19,7 +19,7 @@ Flags:
   --policies="policy"          Path to policies folder.
   --project=PROJECT            GCP Project ID.
   --subscription=SUBSCRIPTION  Pub/Sub subscription to audit.
-  --secret-name="gcp-auditor"  GCP Secret name to use for GCP Auditor.
+  --secret-name="logwarden"  GCP Secret name to use for GCP Auditor.
   --json                       Output results as JSON.
   --slack-webhook              Enable Slack webhook.
   --webhook                    Enable JSON HTTP POST webhook output.
@@ -35,8 +35,8 @@ WEBHOOK_URL=https://your.server/post
 
 ## Installation
 
-GCP-Auditor requires your audit logs to be published to GCP pub/sub via a logging sink.
-We've provided terraform code to deploy GCP-Auditor via Cloud Run, create organization logging sink, a pub/sub topic+subscription, and configure IAM for them to work together.
+Logwarden requires your audit logs to be published to GCP pub/sub via a logging sink.
+We've provided terraform code to deploy Logwarden via Cloud Run, create organization logging sink, a pub/sub topic+subscription, and configure IAM for them to work together.
 
 ### Terraform (TODO)
 

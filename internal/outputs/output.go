@@ -3,7 +3,7 @@ package outputs
 import (
 	"context"
 
-	"github.com/trufflesecurity/gcp-auditor/internal/result"
+	"github.com/trufflesecurity/logwarden/internal/result"
 )
 
 type Output interface {

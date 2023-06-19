@@ -7,7 +7,7 @@ require (
 	github.com/fatih/color v1.15.0
 	github.com/open-policy-agent/opa v0.51.0
 	github.com/trufflesecurity/trufflehog/v3 v3.31.4
-	golang.org/x/text v0.9.0
+	golang.org/x/text v0.10.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )
 

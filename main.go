@@ -20,7 +20,8 @@ var (
 	app = kingpin.New("logwarden", "Logwarden is a tool to audit GCP logs against a set of rego policies.")
 
 	// required
-	policies     = app.Flag("policies", "Path to policies folder.").Default("policy").String()
+	policyBucket = app.Flag("policy-bucket", "GCS bucket containing policies.").Default("").String()
+	policies     = app.Flag("policies", "Path to policies folder.").Default("").String()
 	project      = app.Flag("project", "GCP Project ID.").Required().String()
 	subscription = app.Flag("subscription", "Pub/Sub subscription to audit.").Required().String()
 	secretName   = app.Flag("secret-name", "GCP Secret name to use for GCP Auditor.").Default("logwarden").String()
@@ -44,6 +45,10 @@ func main() {
 	}
 
 	enabledOutputs := []outputs.Output{}
+
+	if *policyBucket == "" && *policies == "" {
+		log.Fatal("You must specify either a local file directory or GCS bucket.")
+	}
 
 	if *jsonOut {
 		enabledOutputs = append(enabledOutputs, json.JSON{})

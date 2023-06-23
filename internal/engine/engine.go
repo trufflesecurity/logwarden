@@ -4,13 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
-
-	"io/ioutil"
 
 	"cloud.google.com/go/pubsub"
 	"cloud.google.com/go/storage"
@@ -231,7 +230,7 @@ func gcsCompiler(directory string) (*ast.Compiler, error) {
 		}
 
 		// Read the object data (Rego file content)
-		data, err := ioutil.ReadAll(rc)
+		data, err := io.ReadAll(rc)
 		rc.Close()
 		if err != nil {
 			log.Fatalf("Failed to read data: %v", err)

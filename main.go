@@ -20,7 +20,7 @@ var (
 	app = kingpin.New("logwarden", "Logwarden is a tool to audit GCP logs against a set of rego policies.")
 
 	// required
-	policies     = app.Flag("policies", "Path to policies folder.").Default("policy").String()
+	policies     = app.Flag("policies", "Path to policies folder.").Default("policies").String()
 	project      = app.Flag("project", "GCP Project ID.").Required().String()
 	subscription = app.Flag("subscription", "Pub/Sub subscription to audit.").Required().String()
 	secretName   = app.Flag("secret-name", "GCP Secret name to use for GCP Auditor.").Default("logwarden").String()

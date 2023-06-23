@@ -4,22 +4,39 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 
 	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/storage"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/trufflesecurity/logwarden/internal/outputs"
 	"github.com/trufflesecurity/logwarden/internal/result"
+	"google.golang.org/api/iterator"
 )
 
 func New(ctx context.Context, policyPath string, outputs []outputs.Output) (*engine, error) {
-	compiler, err := compiler(policyPath)
-	if err != nil {
-		return nil, err
+	var compiler *ast.Compiler
+	var err error
+	// infer type of policy storage location based on path prefix
+	switch {
+	// GCS
+	case strings.HasPrefix(policyPath, "gs://"):
+		compiler, err = gcsCompiler(policyPath)
+		if err != nil {
+			return nil, err
+		}
+	// Local file directory
+	default:
+		compiler, err = localCompiler(policyPath)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	rules, err := rego.New(
@@ -145,7 +162,7 @@ func flattenViolationSlice(v []violation) violation {
 }
 
 // Instantiate the Open Policy Agent with a folder of .rego policies.
-func compiler(directory string) (*ast.Compiler, error) {
+func localCompiler(directory string) (*ast.Compiler, error) {
 	policies := map[string]string{}
 
 	policyFilenames, err := globFiles(directory, ".rego")
@@ -176,6 +193,55 @@ func globFiles(dir string, ext string) ([]string, error) {
 	})
 
 	return files, err
+}
+
+func gcsCompiler(directory string) (*ast.Compiler, error) {
+	ctx := context.Background()
+	policies := map[string]string{}
+
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+
+	bucket := client.Bucket(directory)
+	objects := bucket.Objects(ctx, nil)
+
+	for {
+		object, err := objects.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Fatalf("Failed to list objects: %v", err)
+		}
+
+		objectName := object.Name
+
+		// Skip if it's not a Rego file
+		if !strings.HasSuffix(objectName, ".rego") {
+			continue
+		}
+
+		// Get the GCS object (your Rego file)
+		rc, err := bucket.Object(objectName).NewReader(ctx)
+		if err != nil {
+			log.Fatalf("Failed to read object: %v", err)
+		}
+
+		// Read the object data (Rego file content)
+		data, err := io.ReadAll(rc)
+		rc.Close()
+		if err != nil {
+			log.Fatalf("Failed to read data: %v", err)
+		}
+
+		policies[objectName] = string(data)
+		log.Printf("Loaded policy %s", objectName)
+
+	}
+
+	return ast.CompileModules(policies)
 }
 
 type resultRaw map[string]map[string][]violation

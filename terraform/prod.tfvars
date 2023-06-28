@@ -1,5 +1,5 @@
 environment       = "prod"
-project_id        = "thog-prod"
+project_id        = "truffle-audit"
 ingress           = "INGRESS_TRAFFIC_INTERNAL_ONLY"
 region            = "us-central1"
 organization_id   = "355714717819"

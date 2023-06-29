@@ -43,17 +43,3 @@ jobs:
           args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Notify Spacelift of build completion (success)
-        if: success()
-        env:
-          SPACELIFT_API_KEY_ENDPOINT: https://trufflesec.app.spacelift.io
-          SPACELIFT_API_KEY_ID: ${{ secrets.SPACELIFT_API_KEY_ID }}
-          SPACELIFT_API_KEY_SECRET: ${{ secrets.SPACELIFT_API_KEY_SECRET }}
-        run: spacectl run-external-dependency mark-completed --id "${GITHUB_SHA}-release" --status finished
-      - name: Notify Spacelift of build completion (failed)
-        if: failure()
-        env:
-          SPACELIFT_API_KEY_ENDPOINT: https://trufflesec.app.spacelift.io
-          SPACELIFT_API_KEY_ID: ${{ secrets.SPACELIFT_API_KEY_ID }}
-          SPACELIFT_API_KEY_SECRET: ${{ secrets.SPACELIFT_API_KEY_SECRET }}
-        run: spacectl run-external-dependency mark-completed --id "${GITHUB_SHA}-release" --status failed

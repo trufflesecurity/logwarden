@@ -15,7 +15,7 @@ resource "google_secret_manager_secret_version" "version" {
 }
 
 module "logwarden" {
-  source  = "spacelift.io/trufflesec/logwarden/gcp"
+  source  = "spacelift.io/trufflesec/terraform-gcp-logwarden"
   version = "0.1.0"
 
   # These are defined in per-env tfvars files(see prod.tfvars)

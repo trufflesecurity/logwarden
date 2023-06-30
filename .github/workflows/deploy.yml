@@ -29,11 +29,11 @@ jobs:
           SPACELIFT_API_KEY_ENDPOINT: https://trufflesec.app.spacelift.io
           SPACELIFT_API_KEY_ID: ${{ secrets.SPACELIFT_API_KEY_ID }}
           SPACELIFT_API_KEY_SECRET: ${{ secrets.SPACELIFT_API_KEY_SECRET }}
-        run: spacectl run-external-dependency mark-completed --id "${GITHUB_SHA}-deploy" --status finished
+        run: spacectl run-external-dependency mark-completed --id "${{ GITHUB_SHA }}-deploy" --status finished
       - name: Notify Spacelift of deploy completion (failed)
         if: failure()
         env:
           SPACELIFT_API_KEY_ENDPOINT: https://trufflesec.app.spacelift.io
           SPACELIFT_API_KEY_ID: ${{ secrets.SPACELIFT_API_KEY_ID }}
           SPACELIFT_API_KEY_SECRET: ${{ secrets.SPACELIFT_API_KEY_SECRET }}
-        run: spacectl run-external-dependency mark-completed --id "${GITHUB_SHA}-deploy" --status failed
+        run: spacectl run-external-dependency mark-completed --id "${{ GITHUB_SHA }}-deploy" --status failed

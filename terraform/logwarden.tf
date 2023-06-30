@@ -15,6 +15,7 @@ resource "google_secret_manager_secret_version" "version" {
 }
 
 module "logwarden" {
+  # check discrepancy with spacelift module instructions
   source  = "spacelift.io/trufflesec/terraform-gcp-logwarden"
   version = "0.1.0"
 

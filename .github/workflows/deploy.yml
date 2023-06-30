@@ -3,7 +3,8 @@ name: Deploy
 on:
   workflow_run:
     workflows: [Release, Leaked Secrets Scan]
-    types: [completed]
+    types:
+      - completed
 
 permissions:
   contents: write

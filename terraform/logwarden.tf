@@ -8,7 +8,7 @@ resource "google_secret_manager_secret" "config" {
   }
 }
 
-resource "google_secret_manager_secret_version" "version" {
+resource "google_secret_manager_secret_version" "config" {
   secret = google_secret_manager_secret.config.secret_id
   # this is populated from Spacelift
   secret_data = var.config_values
@@ -30,4 +30,6 @@ module "logwarden" {
   config_secret_id    = google_secret_manager_secret.config.secret_id
   container_args      = var.container_args
   policy_source_dir   = var.policy_source_dir
+
+  depends_on = [google_secret_manager_secret_version.config]
 }

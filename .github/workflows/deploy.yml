@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DOCKER_CLI_EXPERIMENTAL: "enabled"
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Install spacectl
         uses: spacelift-io/setup-spacectl@main
@@ -27,7 +28,6 @@ jobs:
         with:
           fetch-depth: 0
       - name: Notify Spacelift of release or secret scan completion (success)
-        if: ${{ github.event.workflow_run.conclusion == 'success' }}
         env:
           SPACELIFT_API_KEY_ENDPOINT: https://trufflesec.app.spacelift.io
           SPACELIFT_API_KEY_ID: ${{ secrets.SPACELIFT_API_KEY_ID }}
@@ -38,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DOCKER_CLI_EXPERIMENTAL: "enabled"
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     steps:
       - name: Install spacectl
         uses: spacelift-io/setup-spacectl@main
@@ -48,7 +49,6 @@ jobs:
         with:
           fetch-depth: 0
       - name: Notify Spacelift of release or secret scan completion (failed)
-        if: ${{ github.event.workflow_run.conclusion == 'failure' }}
         env:
           SPACELIFT_API_KEY_ENDPOINT: https://trufflesec.app.spacelift.io
           SPACELIFT_API_KEY_ID: ${{ secrets.SPACELIFT_API_KEY_ID }}

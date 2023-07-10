@@ -31,5 +31,6 @@ module "logwarden" {
   container_args      = var.container_args
   policy_source_dir   = var.policy_source_dir
 
+  #ensure that the secret value is available before attempting to deploy infra
   depends_on = [google_secret_manager_secret_version.config]
 }

@@ -2,7 +2,9 @@ name: Deploy
 
 on:
   workflow_run:
-    workflows: [Release, Leaked Secrets Scan]
+      # TODO: disable/renable spacelift push policy
+      # This will never run until it's changed to a valid workflow name
+    workflows: [foo]
     types: [completed]
 
 permissions:
@@ -17,8 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DOCKER_CLI_EXPERIMENTAL: "enabled"
-      # temporary pause this check until spacelift fixes their bug
-    if: ${{ github.event.workflow_run.conclusion == 'Xsuccess' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Install spacectl
         uses: spacelift-io/setup-spacectl@main
@@ -39,9 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DOCKER_CLI_EXPERIMENTAL: "enabled"
-      # TODO: disable/renable spacelift push policy
-      # temporary pause this check until spacelift fixes their bug
-    if: ${{ github.event.workflow_run.conclusion == 'Xfailure' }}
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     steps:
       - name: Install spacectl
         uses: spacelift-io/setup-spacectl@main

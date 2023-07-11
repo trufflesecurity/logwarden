@@ -1,4 +1,5 @@
 resource "google_secret_manager_secret" "config" {
+  project   = var.project_id
   secret_id = "logwarden"
   labels = {
     secretmanager = "logwarden"

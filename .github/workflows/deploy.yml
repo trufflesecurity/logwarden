@@ -2,7 +2,9 @@ name: Deploy
 
 on:
   workflow_run:
-    workflows: [Release, Leaked Secrets Scan]
+      # TODO: disable/renable spacelift push policy
+      # This will never run until it's changed to a valid workflow name
+    workflows: [foo]
     types: [completed]
 
 permissions:

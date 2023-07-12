@@ -9,7 +9,7 @@ resource "google_secret_manager_secret" "config" {
 }
 
 resource "google_secret_manager_secret_version" "config" {
-  secret = google_secret_manager_secret.config.secret_id
+  secret = google_secret_manager_secret.config.id
   # this is populated from Spacelift
   secret_data = var.config_values
 }

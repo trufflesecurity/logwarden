@@ -8,5 +8,6 @@ LOG_ID("cloudaudit.googleapis.com/activity") OR LOG_ID("externalaudit.googleapis
 -protoPayload.serviceName="k8s.io"
 EOF
 docker_image        = "us-docker.pkg.dev/thog-artifacts/public/logwarden:latest"
-container_args      = []
+container_args      = ["--slack-webhook"]
 policy_source_dir   = "../policy/gcp"
+# TODO: add internal deployment repo + instructions for deploy using tfvars file

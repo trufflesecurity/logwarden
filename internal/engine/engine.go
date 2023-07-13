@@ -27,7 +27,7 @@ func New(ctx context.Context, policyPath string, outputs []outputs.Output) (*eng
 	switch {
 	// GCS
 	case strings.HasPrefix(policyPath, "gs://"):
-		compiler, err = gcsCompiler(policyPath)
+		compiler, err = gcsCompiler(strings.TrimPrefix(policyPath, "gs://"))
 		if err != nil {
 			return nil, err
 		}

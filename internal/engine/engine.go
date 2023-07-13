@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -209,7 +210,7 @@ func gcsCompiler(directory string) (*ast.Compiler, error) {
 
 	for {
 		object, err := objects.Next()
-		if err == iterator.Done {
+		if errors.Is(err, iterator.Done) {
 			break
 		}
 		if err != nil {
@@ -240,6 +241,8 @@ func gcsCompiler(directory string) (*ast.Compiler, error) {
 		log.Printf("Loaded policy %s", objectName)
 
 	}
+
+	log.Println("Loaded all policies")
 
 	return ast.CompileModules(policies)
 }

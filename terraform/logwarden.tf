@@ -16,7 +16,7 @@ resource "google_secret_manager_secret_version" "config" {
 
 module "logwarden" {
   source  = "spacelift.io/trufflesec/logwarden/gcp"
-  version = "0.1.5"
+  version = "0.1.6"
 
   # These are defined in per-env tfvars files(see prod.tfvars)
   # expansion to multiple regions/envs will have some variables injected from CI or Spacelift

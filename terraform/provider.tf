@@ -1,6 +1,5 @@
 locals {
-  terraform_service_account = ""
-  project                   = ""
+  project = "truffle-audit"
 }
 
 terraform {

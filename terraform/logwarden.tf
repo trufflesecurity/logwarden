@@ -1,7 +1,7 @@
 resource "google_secret_manager_secret" "config" {
-  secret_id = "logwarden"
+  secret_id = var.env_secret_id
   labels = {
-    secretmanager = "logwarden"
+    secretmanager = var.env_secret_id
   }
   replication {
     automatic = true

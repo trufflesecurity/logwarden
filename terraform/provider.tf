@@ -1,5 +1,5 @@
 locals {
-  project = "truffle-audit"
+  project = "<google_project>"
 }
 
 terraform {

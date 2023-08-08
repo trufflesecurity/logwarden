@@ -1,9 +1,0 @@
-environment         = ""
-project_id          = ""
-ingress             = ""
-region              = ""
-organization_id     = ""
-logging_sink_filter = ""
-docker_image        = ""
-container_args      = [""]
-policy_source_dir   = ""

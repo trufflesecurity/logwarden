@@ -10,13 +10,13 @@ resource "google_secret_manager_secret" "config" {
 
 resource "google_secret_manager_secret_version" "config" {
   secret = google_secret_manager_secret.config.id
-  # this is populated from Spacelift
+  # this can be populated from platform tools like Spacelift, or CI.
   secret_data = var.config_values
 }
 
 module "logwarden" {
-  source  = "spacelift.io/trufflesec/logwarden/gcp"
-  version = "0.1.8"
+  source  = "<module_source>"
+  version = ""
 
   # These are defined in per-env tfvars files(see prod.tfvars)
   # expansion to multiple regions/envs will have some variables injected from CI or Spacelift

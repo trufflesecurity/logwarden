@@ -38,8 +38,25 @@ WEBHOOK_URL=https://your.server/post
 Logwarden requires your audit logs to be published to GCP pub/sub via a logging sink.
 We've provided terraform code to deploy Logwarden via Cloud Run, create organization logging sink, a pub/sub topic+subscription, and configure IAM for them to work together.
 
-### Terraform (TODO)
+### Terraform 
 
+Most of the infrastructure configuration is encapsulated within a Terraform module. Dynamic configuration values, such as webhooks or API keys can be passed in via a seprarate Google Secret resource defined in the root module.
+
+An example configuration is available in the `terraform` sub-directory of this repository. The module expects that the OPA policies will be provided in a sub-directory of the repository with the `.rego` extension. The specific directory is passed in as the input variable `policy_source_dir`. Default policies for Google Cloud are available in the `policy/gcp` sub-directory.
+
+Specific deployments can be configured via `terraform.tfvars` files. Input variables are defined as follows:
+
+- `environment`: Environment for a specific deployment, such as "prod" or "dev".
+- `project_id`: ID of a Google Cloud project.
+- `ingress`: Ingress configuration for the Google Cloud Run service.
+- `region`: Google Cloud region for a specific deployment.
+- `organization_id`: Google Cloud organization ID.
+- `logging_sink_filter`: Defines what log types are collected by the log sink. A default value has been provided.
+- `docker_image`: The docker image that contains the logwarden binary.
+- `container_args`: Runtime arguments for logwarden(passed in a container arguments). 
+- `policy_source_dir`: Subdirectory containing OPA policies as rego files.
+
+The configuration can be copied from the `terraform` directory, with the relevant values populated in `terraform.tfvars`. Users will need to configure a separate Google Secret resource.
 
 ## MITRE ATT&CK Tactics
 

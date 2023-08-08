@@ -1,5 +1,5 @@
 locals {
-  project = "<google_project>"
+  project = "<google_project_id>"
 }
 
 terraform {

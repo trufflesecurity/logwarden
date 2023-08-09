@@ -31,10 +31,7 @@ variable "organization_id" {
 variable "logging_sink_filter" {
   description = "The filter to apply for the logging sink"
   type        = string
-  default     = <<EOF
-LOG_ID("cloudaudit.googleapis.com/activity") OR LOG_ID("externalaudit.googleapis.com/activity") OR LOG_ID("cloudaudit.googleapis.com/system_event") OR LOG_ID("externalaudit.googleapis.com/system_event") OR LOG_ID("cloudaudit.googleapis.com/access_transparency") OR LOG_ID("externalaudit.googleapis.com/access_transparency")
--protoPayload.serviceName="k8s.io"
-EOF
+  default     = ""
 }
 
 variable "docker_image" {

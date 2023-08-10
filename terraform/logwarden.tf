@@ -15,8 +15,7 @@ resource "google_secret_manager_secret_version" "config" {
 }
 
 module "logwarden" {
-  source  = "<module_source>"
-  version = ""
+  source = "github.com/trufflesecurity/terraform-gcp-logwarden?ref=1.0.0"
 
   # These are defined in per-env tfvars files(see prod.tfvars)
   # expansion to multiple regions/envs will have some variables injected from CI or Spacelift

@@ -3,7 +3,7 @@ module github.com/trufflesecurity/logwarden
 go 1.19
 
 require (
-	cloud.google.com/go/pubsub v1.32.0
+	cloud.google.com/go/pubsub v1.33.0
 	cloud.google.com/go/storage v1.31.0
 	github.com/fatih/color v1.15.0
 	github.com/open-policy-agent/opa v0.51.0

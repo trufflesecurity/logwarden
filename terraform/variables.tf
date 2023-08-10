@@ -1,5 +1,5 @@
 variable "environment" {
-  description = "The environment in which the infrastructure will be deployed"
+  description = "The environment in which the infrastructure will be deployed(dev, prod etc.)"
   type        = string
   default     = ""
 }
@@ -11,7 +11,7 @@ variable "project_id" {
 }
 
 variable "ingress" {
-  description = "The ingress settings for the network"
+  description = "The ingress settings for the google cloud run function"
   type        = string
   default     = ""
 }
@@ -47,19 +47,19 @@ variable "env_secret_id" {
 }
 
 variable "container_args" {
-  description = "Arguments to pass to the container at startup"
+  description = "Arguments to pass to the logwarden container at startup"
   type        = list(string)
   default     = []
 }
 
 variable "policy_source_dir" {
-  description = "Directory containing IAM policy files"
+  description = "Repo directory containing rego policy files"
   type        = string
   default     = ""
 }
 
 variable "config_values" {
-  description = "Application configuration variables."
+  description = "Application configuration variables, stored in GSM."
   type        = string
   default     = ""
 }

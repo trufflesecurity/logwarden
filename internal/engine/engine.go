@@ -21,7 +21,7 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-func New(ctx context.Context, policyPath string, outputs []outputs.Output) (*engine, error) {
+func New(ctx context.Context, policyPath string, outputs []outputs.Output, printAll bool) (*engine, error) {
 	var compiler *ast.Compiler
 	var err error
 	// infer type of policy storage location based on path prefix
@@ -49,16 +49,18 @@ func New(ctx context.Context, policyPath string, outputs []outputs.Output) (*eng
 	}
 
 	return &engine{
-		ruleset: rules,
-		results: make(chan []result.Result),
-		outputs: outputs,
+		ruleset:  rules,
+		results:  make(chan []result.Result),
+		outputs:  outputs,
+		printAll: printAll,
 	}, nil
 }
 
 type engine struct {
-	ruleset rego.PreparedEvalQuery
-	results chan []result.Result
-	outputs []outputs.Output
+	ruleset  rego.PreparedEvalQuery
+	results  chan []result.Result
+	outputs  []outputs.Output
+	printAll bool
 }
 
 func (e *engine) Alert(ctx context.Context) error {
@@ -88,6 +90,10 @@ func (e *engine) Subscribe(ctx context.Context, project, subscription string) er
 
 	var received int32
 	err = sub.Receive(ctx, func(_ context.Context, msg *pubsub.Message) {
+		if e.printAll {
+			fmt.Println(string(msg.Data))
+		}
+
 		var data map[string]interface{}
 		err = json.Unmarshal(msg.Data, &data)
 		if err != nil {

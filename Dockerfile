@@ -1,5 +1,4 @@
-FROM alpine:3.17
-
+FROM alpine
 RUN apk add --no-cache git ca-certificates \
     && rm -rf /var/cache/apk/* && \
     update-ca-certificates

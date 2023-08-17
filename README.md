@@ -2,7 +2,8 @@
 
 Process all of your GCP audit logs against OPA Rego policies and alert for violations in real-time.
 
-Some amount of policy coverage for MITRE ATT&CK Tactics are included.
+Some amount of policy coverage for MITRE ATT&CK Tactics are included as well as a handful of other helpful rules.
+The included policies may be noisy for your organization and adjustment of them for your environment is encouraged.
 
 ![Slack alerts created by logwarden](resources/slack_alerts.png)
 

@@ -9,8 +9,7 @@ import (
 	"github.com/trufflesecurity/logwarden/internal/result"
 )
 
-type JSON struct {
-}
+type JSON struct{}
 
 func (o JSON) Send(ctx context.Context, res result.Result) error {
 	out, err := json.Marshal(res)

@@ -17,8 +17,7 @@ var (
 	redPrinter    = color.New(color.FgRed)
 )
 
-type Human struct {
-}
+type Human struct{}
 
 func (o Human) Send(ctx context.Context, res result.Result) error {
 	printer := greenPrinter

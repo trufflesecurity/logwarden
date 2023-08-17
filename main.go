@@ -6,14 +6,15 @@ import (
 	"net/http"
 	"os"
 
+	"gopkg.in/alecthomas/kingpin.v2"
+
 	"github.com/trufflesecurity/logwarden/internal/engine"
 	"github.com/trufflesecurity/logwarden/internal/outputs"
 	"github.com/trufflesecurity/logwarden/internal/outputs/human"
 	"github.com/trufflesecurity/logwarden/internal/outputs/json"
 	"github.com/trufflesecurity/logwarden/internal/outputs/slack"
 	"github.com/trufflesecurity/logwarden/internal/outputs/webhook"
-	"github.com/trufflesecurity/trufflehog/v3/pkg/common"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/trufflesecurity/logwarden/internal/secret"
 )
 
 var (
@@ -26,7 +27,8 @@ var (
 	secretName   = app.Flag("secret-name", "GCP Secret name to use for GCP Auditor.").Default("logwarden").String()
 
 	// options
-	jsonOut = app.Flag("json", "Output results as JSON.").Bool()
+	jsonOut  = app.Flag("json", "Output results as JSON.").Bool()
+	printAll = app.Flag("print-all", "Output all logs that are processed.").Bool()
 
 	// outputs
 	slackWebhookOut = app.Flag("slack-webhook", "Enable Slack webhook.").Bool()
@@ -38,7 +40,7 @@ func main() {
 
 	ctx := context.TODO()
 
-	secret, err := common.GetSecret(ctx, *project, *secretName)
+	secret, err := secret.GetSecret(ctx, *project, *secretName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -61,7 +63,7 @@ func main() {
 		enabledOutputs = append(enabledOutputs, webhook.Webhook{PostURL: webhookURL})
 	}
 
-	eng, err := engine.New(ctx, *policies, enabledOutputs)
+	eng, err := engine.New(ctx, *policies, enabledOutputs, *printAll)
 	if err != nil {
 		log.Fatal(err)
 	}

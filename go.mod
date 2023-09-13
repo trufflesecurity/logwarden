@@ -10,7 +10,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/open-policy-agent/opa v0.55.0
 	github.com/pkg/errors v0.9.1
-	golang.org/x/text v0.12.0
+	golang.org/x/text v0.13.0
 	google.golang.org/api v0.131.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )

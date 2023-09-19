@@ -34,6 +34,18 @@ dockers:
     - --label=org.opencontainers.image.version={{ .Version }}
     - --label=org.opencontainers.image.revision={{ .FullCommit }}
     - --label=org.opencontainers.image.licenses=AGPL-3.0
+  - image_templates: ["us-docker.pkg.dev/thog-artifacts/public/logwarden:v{{ .Version }}-amd64"]
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+    - --platform=linux/amd64
+    - --label=org.opencontainers.image.title={{ .ProjectName }}
+    - --label=org.opencontainers.image.description={{ .ProjectName }}
+    - --label=org.opencontainers.image.url=https://github.com/trufflesecurity/{{ .ProjectName }}
+    - --label=org.opencontainers.image.source=https://github.com/trufflesecurity/{{ .ProjectName }}
+    - --label=org.opencontainers.image.version={{ .Version }}
+    - --label=org.opencontainers.image.revision={{ .FullCommit }}
+    - --label=org.opencontainers.image.licenses=AGPL-3.0
 docker_manifests:
   - name_template: ghcr.io/trufflesecurity/{{ .ProjectName }}:{{ .Version }}
     image_templates:

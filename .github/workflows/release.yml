@@ -38,7 +38,7 @@ jobs:
       - name: Docker Login to Google Artifact Registry
         uses: docker/login-action@v2
         with:
-          registry: gcr.io
+          registry: us-docker.pkg.dev
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.access_token }}
 

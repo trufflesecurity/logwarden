@@ -34,6 +34,11 @@ dockers:
     - --label=org.opencontainers.image.version={{ .Version }}
     - --label=org.opencontainers.image.revision={{ .FullCommit }}
     - --label=org.opencontainers.image.licenses=AGPL-3.0
+  - image_templates: ["us-docker.pkg.dev/thog-artifacts/public/logwarden:v{{ .Version }}-amd64"]
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+    - --platform=linux/amd64
 docker_manifests:
   - name_template: ghcr.io/trufflesecurity/{{ .ProjectName }}:{{ .Version }}
     image_templates:
@@ -43,3 +48,9 @@ docker_manifests:
     image_templates:
     - ghcr.io/trufflesecurity/{{ .ProjectName }}:{{ .Version }}-amd64
     - ghcr.io/trufflesecurity/{{ .ProjectName }}:{{ .Version }}-arm64v8
+  - name_template: us-docker.pkg.dev/thog-artifacts/public/logwarden:v{{ .Version }}
+    image_templates:
+    - us-docker.pkg.dev/thog-artifacts/public/logwarden:v{{ .Version }}-amd64
+  - name_template: us-docker.pkg.dev/thog-artifacts/public/logwarden:latest
+    image_templates:
+    - us-docker.pkg.dev/thog-artifacts/public/logwarden:v{{ .Version }}-amd64

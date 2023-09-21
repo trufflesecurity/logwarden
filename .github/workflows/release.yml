@@ -43,7 +43,7 @@ jobs:
           password: ${{ steps.auth.outputs.access_token }}
       
       - run: |-
-        echo ${{ steps.auth.outputs.access_token }} | docker login -u oauth2accesstoken --password-stdin https://us-docker.pkg.dev
+          echo '${{ steps.auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin https://us-docker.pkg.dev
 
       - name: Docker Login to GitHub Container Registry
         uses: docker/login-action@v2

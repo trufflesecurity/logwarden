@@ -36,14 +36,14 @@ jobs:
           service_account: ${{ secrets.SERVICE_ACCOUNT }}
 
       - name: Docker Login to Google Artifact Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: us-docker.pkg.dev
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.access_token }}
 
       - name: Docker Login to GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}

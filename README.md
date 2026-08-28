@@ -13,17 +13,20 @@ The included policies may be noisy for your organization and adjustment of them 
 $ logwarden --help
 usage: logwarden --project=PROJECT --subscription=SUBSCRIPTION [<flags>]
 
-GCP Auditor is a tool to audit GCP logs against a set of rego policies.
+Logwarden is a tool to audit GCP logs against a set of rego policies.
+
 
 Flags:
-  --help                       Show context-sensitive help (also try --help-long and --help-man).
-  --policies="policy"          Path to policies folder.
+  --[no-]help                  Show context-sensitive help (also try --help-long
+                               and --help-man).
+  --policies="policies"        Path to policies folder.
   --project=PROJECT            GCP Project ID.
   --subscription=SUBSCRIPTION  Pub/Sub subscription to audit.
-  --secret-name="logwarden"  GCP Secret name to use for GCP Auditor.
-  --json                       Output results as JSON.
-  --slack-webhook              Enable Slack webhook.
-  --webhook                    Enable JSON HTTP POST webhook output.
+  --secret-name="logwarden"    GCP Secret name to use for GCP Auditor.
+  --[no-]json                  Output results as JSON.
+  --[no-]print-all             Output all logs that are processed.
+  --[no-]slack-webhook         Enable Slack webhook.
+  --[no-]webhook               Enable JSON HTTP POST webhook output.
 ```
 
 ### GCP Secret format

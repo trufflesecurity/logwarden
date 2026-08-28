@@ -1,22 +1,17 @@
 package mitre_lateral_movement
 
+# MITRE ATT&CK Lateral Movement (TA0008)
+
+import data.mitre_helpers as helpers
 import rego.v1
 
-violation contains {"msg": msg, "details": {"project": project, "actor": actor, "method": method, "permission": permission, "granted": granted, "resource": resource, "link": link}} if {
-	actor = input.protoPayload.authenticationInfo.principalEmail
+violation contains {"msg": "possible lateral movement attempt", "details": details} if {
+	patterns := [
+		"resourcemanager.projects.setIamPolicy",
+		"compute.instances.setMetadata", # SSH key injection
+		"compute.projects.setCommonInstanceMetadata", # project-wide SSH keys
+	]
 
-	permissions_and_methods = ["resourcemanager.projects.setIamPolicy"]
-
-	permission = input.protoPayload.authorizationInfo[_].permission
-	method = input.protoPayload.methodName
-	true in [glob.match(permissions_and_methods[_], [], permission), glob.match(permissions_and_methods[_], [], method)]
-
-	granted = input.protoPayload.authorizationInfo[_].granted
-	resource = input.protoPayload.authorizationInfo[_].resource
-	project = input.resource.labels.project_id
-
-	insertId = input.insertId
-	timestamp = input.timestamp
-	link = sprintf("https://console.cloud.google.com/logs/query;query=%s;timeRange=PT1H;cursorTimestamp=%s?project=%s", [urlquery.encode(sprintf("insertId=\"%s\"\ntimestamp=\"%s\"", [insertId, timestamp])), timestamp, project])
-	msg = "possible lateral movement attempt"
+	some auth in helpers.matched_entries(patterns)
+	details := helpers.details(auth)
 }

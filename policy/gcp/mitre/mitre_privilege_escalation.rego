@@ -30,6 +30,7 @@ escalation_patterns(_) := [
 	"iam.roles.update",
 	"orgpolicy.policy.set",
 	"**.setIamPolicy",
+	"setIamPolicy", # resource manager logs use the bare method name
 ]
 
 violation contains {"msg": "possible privilege escalation attempt", "details": details} if {

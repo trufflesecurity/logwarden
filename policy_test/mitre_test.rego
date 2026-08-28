@@ -93,6 +93,26 @@ test_permission_denied_fires_without_principal_email if {
 	v.details.actor == "unknown"
 }
 
+# resource manager emits the bare SetIamPolicy method name; a denied call with
+# authorizationInfo redacted must still alert
+test_permission_denied_fires_on_bare_method_name if {
+	e := object.union(event("SetIamPolicy", "resourcemanager.projects.setIamPolicy"), {"protoPayload": {"status": {"code": 7}}})
+	redacted := json.remove(e, ["protoPayload/authorizationInfo"])
+	some v in data.mitre_privilege_escalation.violation with input as redacted
+	v.msg == denied_msg
+}
+
+# a sparse authorizationInfo entry degrades the alert details, not the alert
+test_public_binding_fires_with_sparse_auth_entry if {
+	e := object.union(event("SetIamPolicy", "storage.buckets.setIamPolicy"), {"protoPayload": {
+		"authorizationInfo": [{"permission": "storage.buckets.setIamPolicy"}],
+		"serviceData": {"policyDelta": {"bindingDeltas": [{"action": "ADD", "role": "roles/storage.objectViewer", "member": "allUsers"}]}},
+	}})
+	some v in data.mitre_exfiltration.violation with input as e
+	v.msg == "possible data exfiltration attempt - public exposure"
+	v.details.resource == ""
+}
+
 # a denial of something unrelated to escalation is not a privesc alert
 test_permission_denied_ignores_unrelated_denial if {
 	e := object.union(event("storage.objects.get", "storage.objects.get"), {"protoPayload": {"status": {"code": 7}}})

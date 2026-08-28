@@ -45,17 +45,18 @@ match_any(patterns) if {
 }
 
 # Alert details built from a single authorizationInfo entry, so permission,
-# granted, and resource all describe the same access check. project is empty
-# for org- and folder-level events, which must still alert.
+# granted, and resource all describe the same access check. Every field is
+# defaulted so a sparse log entry (org-level, redacted identity, entry without
+# resource) degrades the alert's detail instead of dropping the alert.
 details(auth) := d if {
 	project := object.get(input, ["resource", "labels", "project_id"], "")
 	d := {
 		"project": project,
-		"actor": input.protoPayload.authenticationInfo.principalEmail,
+		"actor": object.get(input.protoPayload, ["authenticationInfo", "principalEmail"], object.get(input.protoPayload, ["authenticationInfo", "principalSubject"], "unknown")),
 		"method": input.protoPayload.methodName,
-		"permission": auth.permission,
-		"granted": auth.granted,
-		"resource": auth.resource,
+		"permission": object.get(auth, "permission", ""),
+		"granted": object.get(auth, "granted", false),
+		"resource": object.get(auth, "resource", ""),
 		"link": link(project),
 	}
 }

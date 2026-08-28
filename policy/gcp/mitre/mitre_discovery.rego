@@ -8,6 +8,7 @@ import rego.v1
 violation contains {"msg": "possible discovery attempt", "details": details} if {
 	patterns := [
 		"**.testIamPermissions",
+		"testIamPermissions", # resource manager logs use the bare method name
 		"storage.buckets.list",
 		"**.searchAllResources", # cloud asset inventory recon
 		"**.searchAllIamPolicies",

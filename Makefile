@@ -7,7 +7,7 @@ fmt:
 	opa fmt policy/*/*.rego -w
 
 lint:
-	golangci-lint run --enable bodyclose --enable exportloopref --out-format=colored-line-number --timeout 10m
+	golangci-lint run --enable bodyclose --timeout 10m
 
 docker:
 	docker buildx build --push \

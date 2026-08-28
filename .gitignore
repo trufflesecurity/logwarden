@@ -3,3 +3,4 @@ testdata
 .terraform
 .terraform.lock.hcl
 dist
+gha-creds-*.json

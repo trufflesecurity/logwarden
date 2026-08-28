@@ -12,10 +12,10 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/pubsub/v2"
 	"cloud.google.com/go/storage"
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/rego"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/rego"
 	"github.com/trufflesecurity/logwarden/internal/outputs"
 	"github.com/trufflesecurity/logwarden/internal/result"
 	"google.golang.org/api/iterator"
@@ -84,9 +84,9 @@ func (e *engine) Subscribe(ctx context.Context, project, subscription string) er
 	if err != nil {
 		return fmt.Errorf("pubsub.NewClient: %v", err)
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
-	sub := client.Subscription(subscription)
+	sub := client.Subscriber(subscription)
 
 	var received int32
 	err = sub.Receive(ctx, func(_ context.Context, msg *pubsub.Message) {
@@ -238,7 +238,7 @@ func gcsCompiler(directory string) (*ast.Compiler, error) {
 
 		// Read the object data (Rego file content)
 		data, err := io.ReadAll(rc)
-		rc.Close()
+		_ = rc.Close()
 		if err != nil {
 			log.Fatalf("Failed to read data: %v", err)
 		}

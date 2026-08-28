@@ -22,16 +22,16 @@ type Human struct{}
 func (o Human) Send(ctx context.Context, res result.Result) error {
 	printer := greenPrinter
 
-	greenPrinter.Printf("Rule: %s\n", yellowPrinter.Sprint(res.Rule))
-	printer.Printf("Message: %s\n", whitePrinter.Sprint(res.Message))
-	printer.Printf("Type: %s\n", whitePrinter.Sprint(res.Type))
+	_, _ = greenPrinter.Printf("Rule: %s\n", yellowPrinter.Sprint(res.Rule))
+	_, _ = printer.Printf("Message: %s\n", whitePrinter.Sprint(res.Message))
+	_, _ = printer.Printf("Type: %s\n", whitePrinter.Sprint(res.Type))
 	for k, v := range res.Details {
 		if k == "granted" && v == true {
-			printer.Printf("Granted: %s\n", redPrinter.Sprint("true"))
+			_, _ = printer.Printf("Granted: %s\n", redPrinter.Sprint("true"))
 			continue
 		}
 
-		printer.Printf("%s: %v\n", cases.Title(language.English).String(k), whitePrinter.Sprint(v))
+		_, _ = printer.Printf("%s: %v\n", cases.Title(language.English).String(k), whitePrinter.Sprint(v))
 	}
 	fmt.Println("")
 

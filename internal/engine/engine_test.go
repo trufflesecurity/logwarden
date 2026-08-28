@@ -83,13 +83,13 @@ func TestEvaluateSetRule(t *testing.T) {
 	}
 }
 
-// The mitre policies additionally traded `import future.keywords.in` for
-// `import rego.v1`, so they exercise a second piece of the migration: the `in`
-// operator and glob.match still resolving under the v1 parser. A bad import
-// swap would drop the keyword and silently stop these rules from matching.
-func TestEvaluateFutureKeywordsRule(t *testing.T) {
+// The mitre policies match through the shared mitre_helpers functions, so this
+// exercises cross-package function calls resolving under the v1 parser and the
+// functions-only helper package staying invisible to the engine's `data`
+// query. A break in either would silently stop these rules from matching.
+func TestEvaluateMitreHelpersRule(t *testing.T) {
 	// A bucket listing, which mitre_discovery matches via
-	// `true in [glob.match(...)]`.
+	// mitre_helpers.match.
 	results := evalOne(t, map[string]any{
 		"insertId":  "abc123",
 		"timestamp": "2026-01-01T00:00:00Z",

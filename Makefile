@@ -1,4 +1,7 @@
-.PHONY: run fmt
+.PHONY: run fmt test
+
+test:
+	opa test policy policy_test
 
 run:
 	go run . --project truffle-audit --subscription logwarden-test

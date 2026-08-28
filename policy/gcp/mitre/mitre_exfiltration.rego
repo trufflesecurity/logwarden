@@ -1,46 +1,29 @@
 package mitre_exfiltration
 
+# MITRE ATT&CK Exfiltration (TA0010)
+
+import data.mitre_helpers as helpers
 import rego.v1
 
-violation contains {"msg": msg, "details": {"project": project, "actor": actor, "method": method, "permission": permission, "granted": granted, "resource": resource, "link": link}} if {
-	actor = input.protoPayload.authenticationInfo.principalEmail
-
-	permissions_and_methods = [
+violation contains {"msg": "possible data exfiltration attempt", "details": details} if {
+	# moving or exposing data; data-copy patterns live in mitre_collection
+	patterns := [
 		"storage.buckets.create", # staging data
-		"compute.instances.export", # exporting data
-		"storage.setIamPermissions", # opening up access to data
-		"snapshots.get",
-		"disks.createSnapshots",
+		"cloudsql.instances.export",
+		"bigquery.tables.export",
+		"storage.buckets.setIamPolicy", # opening up access to data
+		"storage.objects.setIamPolicy",
 	]
 
-	permission = input.protoPayload.authorizationInfo[_].permission
-	method = input.protoPayload.methodName
-	true in [glob.match(permissions_and_methods[_], [], permission), glob.match(permissions_and_methods[_], [], method)]
-
-	granted = input.protoPayload.authorizationInfo[_].granted
-	resource = input.protoPayload.authorizationInfo[_].resource
-	project = input.resource.labels.project_id
-
-	insertId = input.insertId
-	timestamp = input.timestamp
-	link = sprintf("https://console.cloud.google.com/logs/query;query=%s;timeRange=PT1H;cursorTimestamp=%s?project=%s", [urlquery.encode(sprintf("insertId=\"%s\"\ntimestamp=\"%s\"", [insertId, timestamp])), timestamp, project])
-	msg = "possible data exfiltration attempt"
+	some auth in helpers.matched_entries(patterns)
+	details := helpers.details(auth)
 }
 
-violation contains {"msg": msg, "details": {"project": project, "actor": actor, "method": method, "permission": permission, "granted": granted, "resource": resource, "member": member, "link": link}} if {
-	actor = input.protoPayload.authenticationInfo.principalEmail
-	permission = input.protoPayload.authorizationInfo[_].permission
-	method = input.protoPayload.methodName
-	granted = input.protoPayload.authorizationInfo[_].granted
-	resource = input.protoPayload.authorizationInfo[_].resource
-	project = input.resource.labels.project_id
-	member = input.protoPayload.serviceData.policyDelta.bindingDeltas[_].member
+violation contains {"msg": "possible data exfiltration attempt - public exposure", "details": details} if {
+	delta := input.protoPayload.serviceData.policyDelta.bindingDeltas[_]
+	delta.action == "ADD"
+	delta.member in {"allUsers", "allAuthenticatedUsers"}
 
-	input.protoPayload.serviceData.policyDelta.bindingDeltas[_].action == "ADD"
-	input.protoPayload.serviceData.policyDelta.bindingDeltas[_].member == "allUsers"
-
-	insertId = input.insertId
-	timestamp = input.timestamp
-	link = sprintf("https://console.cloud.google.com/logs/query;query=%s;timeRange=PT1H;cursorTimestamp=%s?project=%s", [urlquery.encode(sprintf("insertId=\"%s\"\ntimestamp=\"%s\"", [insertId, timestamp])), timestamp, project])
-	msg = "possible data exfiltration attempt - unauthenticated exposure"
+	auth := input.protoPayload.authorizationInfo[0]
+	details := object.union(helpers.details(auth), {"member": delta.member, "role": delta.role})
 }

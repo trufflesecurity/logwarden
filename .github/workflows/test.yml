@@ -1,0 +1,24 @@
+name: Test
+
+on:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+      - name: Go tests
+        run: go test ./...
+      - uses: open-policy-agent/setup-opa@v2
+        with:
+          version: latest
+      - name: OPA policy tests
+        run: opa test policy policy_test

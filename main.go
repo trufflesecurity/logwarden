@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/alecthomas/kingpin/v2"
 
 	"github.com/trufflesecurity/logwarden/internal/engine"
 	"github.com/trufflesecurity/logwarden/internal/outputs"

@@ -4,7 +4,7 @@ resource "google_secret_manager_secret" "config" {
     secretmanager = var.env_secret_id
   }
   replication {
-    automatic = true
+    auto {}
   }
 }
 
@@ -15,7 +15,7 @@ resource "google_secret_manager_secret_version" "config" {
 }
 
 module "logwarden" {
-  source = "github.com/trufflesecurity/terraform-gcp-logwarden?ref=1.0.0"
+  source = "github.com/trufflesecurity/terraform-gcp-logwarden?ref=1.1.1"
 
   # These are defined in per-env tfvars files(see prod.tfvars)
   # expansion to multiple regions/envs will have some variables injected from CI or Spacelift

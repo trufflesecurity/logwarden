@@ -84,7 +84,7 @@ The configuration can be copied from the `terraform` directory, with the relevan
 
 - [Rego Policy Reference](https://www.openpolicyagent.org/docs/latest/policy-reference/)
 - Policy blocks are ORed, but evaluations within a policy are ANDed
-- Use the policy block signature provided in the example policies for compatability, and see the [template](policy/gcp/template.rego) for a starting point
+- Use the policy block signature provided in the example policies for compatability, and see the [template](policy/gcp/template.rego.example) for a starting point
 
 ## Todo (help wanted!)
 

@@ -4,7 +4,7 @@ run:
 	go run . --project truffle-audit --subscription logwarden-test
 
 fmt:
-	opa fmt policy/*/*.rego -w
+	opa fmt -w policy/
 
 lint:
 	golangci-lint run --enable bodyclose --timeout 10m

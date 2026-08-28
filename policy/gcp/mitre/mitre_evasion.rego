@@ -1,8 +1,8 @@
 package mitre_evasion
 
-import future.keywords.in
+import rego.v1
 
-violation[{"msg": msg, "details": {"project": project, "actor": actor, "method": method, "permission": permission, "granted": granted, "resource": resource, "link": link}}] {
+violation contains {"msg": msg, "details": {"project": project, "actor": actor, "method": method, "permission": permission, "granted": granted, "resource": resource, "link": link}} if {
 	actor = input.protoPayload.authenticationInfo.principalEmail
 
 	permissions_and_methods = [

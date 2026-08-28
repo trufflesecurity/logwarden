@@ -1,6 +1,8 @@
 package firewall_rule_created
 
-violation[{"msg": msg, "details": {"project": project, "actor": actor, "name": name}}] {
+import rego.v1
+
+violation contains {"msg": msg, "details": {"project": project, "actor": actor, "name": name}} if {
 	input.protoPayload.request["@type"] == "type.googleapis.com/compute.firewalls.insert"
 
 	project = input.resource.labels.project_id

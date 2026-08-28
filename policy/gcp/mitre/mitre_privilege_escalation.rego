@@ -1,8 +1,8 @@
 package mitre_privilege_escalation
 
-import future.keywords.in
+import rego.v1
 
-violation[{"msg": msg, "details": {"project": project, "actor": actor, "method": method, "permission": permission, "granted": granted, "resource": resource, "link": link}}] {
+violation contains {"msg": msg, "details": {"project": project, "actor": actor, "method": method, "permission": permission, "granted": granted, "resource": resource, "link": link}} if {
 	actor = input.protoPayload.authenticationInfo.principalEmail
 
 	permissions_and_methods = [
@@ -39,7 +39,7 @@ violation[{"msg": msg, "details": {"project": project, "actor": actor, "method":
 	msg = "possible privilege escalation attempt"
 }
 
-violation[{"msg": msg, "details": {"project": project, "actor": actor, "method": method, "permission": permission, "granted": granted, "resource": resource, "link": link}}] {
+violation contains {"msg": msg, "details": {"project": project, "actor": actor, "method": method, "permission": permission, "granted": granted, "resource": resource, "link": link}} if {
 	actor = input.protoPayload.authenticationInfo.principalEmail
 	permission = input.protoPayload.authorizationInfo[_].permission
 	method = input.protoPayload.methodName
@@ -55,7 +55,7 @@ violation[{"msg": msg, "details": {"project": project, "actor": actor, "method":
 	msg = "possible privilege escalation attempt denied"
 }
 
-violation[{"msg": msg, "details": {"project": project, "actor": actor, "method": method, "resource": resource, "org_policy": org_policy, "org_policy_subject": org_policy_subject, "org_policy_description": org_policy_description, "link": link}}] {
+violation contains {"msg": msg, "details": {"project": project, "actor": actor, "method": method, "resource": resource, "org_policy": org_policy, "org_policy_subject": org_policy_subject, "org_policy_description": org_policy_description, "link": link}} if {
 	actor = input.protoPayload.authenticationInfo.principalEmail
 	method = input.protoPayload.methodName
 	resource = input.protoPayload.authorizationInfo[_].resource

@@ -1,6 +1,8 @@
 package gke_rbac_deny
 
-violation[{"msg": msg, "details": {"cluster": cluster, "actor": actor, "method": method}}] {
+import rego.v1
+
+violation contains {"msg": msg, "details": {"cluster": cluster, "actor": actor, "method": method}} if {
 	input.labels["authorization.k8s.io/decision"] == "deny"
 
 	project = input.resource.labels.project_id

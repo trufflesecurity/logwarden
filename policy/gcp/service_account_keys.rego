@@ -1,6 +1,8 @@
 package service_account_keys
 
-violation[{"msg": msg, "details": {"actor": actor, "service_account": svcAcct}}] {
+import rego.v1
+
+violation contains {"msg": msg, "details": {"actor": actor, "service_account": svcAcct}} if {
 	input.protoPayload.methodName == "google.iam.admin.v1.CreateServiceAccountKey"
 
 	svcAcct = input.resource.labels.email_id

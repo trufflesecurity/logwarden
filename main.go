@@ -72,7 +72,7 @@ func main() {
 // --slack-webhook and --webhook: the point of eval is that a half-baked rule cannot reach
 // the alert channel, so there is no way to turn the alerting outputs back on.
 func evaluate(ctx context.Context) {
-	eng, err := engine.New(ctx, *policies, []outputs.Output{stdoutOutput()}, false)
+	eng, err := engine.New(ctx, *policies, []outputs.Output{stdoutOutput()}, *printAll)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -84,11 +84,10 @@ func evaluate(ctx context.Context) {
 	defer func() { _ = in.Close() }()
 
 	events, byRule, err := eng.EvaluateStream(ctx, in)
+	printTally(events, byRule)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	printTally(events, byRule)
 }
 
 // harvest captures live events to a file so they can be replayed with eval.
@@ -106,7 +105,8 @@ func harvest(ctx context.Context) {
 		defer cancel()
 	}
 
-	out, err := createOutput(*harvestOutput)
+	partial := *harvestOutput + ".partial"
+	out, err := createOutput(partial)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -119,6 +119,10 @@ func harvest(ctx context.Context) {
 		err = closeErr
 	}
 	if err != nil {
+		log.Fatalf("%v (captured %d events, kept at %s)", err, captured, partial)
+	}
+
+	if err := os.Rename(partial, *harvestOutput); err != nil {
 		log.Fatal(err)
 	}
 

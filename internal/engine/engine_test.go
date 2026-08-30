@@ -221,3 +221,42 @@ func TestNewRejectsEmptyPolicyDir(t *testing.T) {
 		t.Fatal("expected an error for a directory with no .rego files")
 	}
 }
+
+// A UTF-8 BOM used to be read as the first event's opening byte, which dropped event one
+// from an NDJSON dump and made a JSON array parse as zero events with no error at all.
+func TestEvaluateStreamSkipsBOM(t *testing.T) {
+	for _, name := range []string{"events.ndjson", "events.json"} {
+		t.Run(name, func(t *testing.T) {
+			eng, got := newTestEngine(t)
+
+			raw, err := os.ReadFile(filepath.Join("testdata", name))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			events, _, err := eng.EvaluateStream(context.Background(),
+				bytes.NewReader(append([]byte("\xef\xbb\xbf"), raw...)))
+			if err != nil {
+				t.Fatalf("EvaluateStream: %v", err)
+			}
+			if events != 2 || len(got.got) != 1 {
+				t.Errorf("events = %d, results = %d; want 2 and 1", events, len(got.got))
+			}
+		})
+	}
+}
+
+// Input that parses to nothing is a format mistake. Reporting it as a clean zero-violation
+// run would read as "this rule is quiet" to anyone using eval as a gate.
+func TestEvaluateStreamRejectsUnparseableInput(t *testing.T) {
+	eng, _ := newTestEngine(t)
+
+	if _, _, err := eng.EvaluateStream(context.Background(), strings.NewReader("not json\n")); err == nil {
+		t.Fatal("expected an error when no events could be parsed")
+	}
+
+	// An genuinely empty stream is not an error.
+	if _, _, err := eng.EvaluateStream(context.Background(), strings.NewReader("  \n")); err != nil {
+		t.Fatalf("empty input: %v", err)
+	}
+}

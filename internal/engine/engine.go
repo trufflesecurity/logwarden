@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"cloud.google.com/go/pubsub/v2"
 	"cloud.google.com/go/storage"
@@ -27,6 +28,10 @@ import (
 // maxEventBytes caps a single newline-delimited log event. Audit log entries routinely
 // exceed bufio.Scanner's 64KiB default.
 const maxEventBytes = 16 * 1024 * 1024
+
+// harvestIdle is how long Harvest waits for a message it has not already captured before
+// deciding the subscription has nothing more to give. A var so tests need not wait it out.
+var harvestIdle = 15 * time.Second
 
 func New(ctx context.Context, policyPath string, outputs []outputs.Output, printAll bool) (*engine, error) {
 	var compiler *ast.Compiler
@@ -136,6 +141,11 @@ func (e *engine) EvaluateStream(ctx context.Context, r io.Reader) (int, map[stri
 
 	check := func(input map[string]interface{}) {
 		events++
+		if e.printAll {
+			if raw, err := json.Marshal(input); err == nil {
+				fmt.Println(string(raw))
+			}
+		}
 		results, err := e.Check(ctx, input)
 		if err != nil {
 			log.Printf("event %d: %v", events, err)
@@ -148,6 +158,11 @@ func (e *engine) EvaluateStream(ctx context.Context, r io.Reader) (int, map[stri
 	}
 
 	br := bufio.NewReaderSize(r, 64*1024)
+
+	// A UTF-8 BOM would otherwise be read as the first event's opening byte.
+	if b, _ := br.Peek(3); bytes.Equal(b, []byte("\xef\xbb\xbf")) {
+		_, _ = br.Discard(3)
+	}
 
 	// Peek (without consuming) to tell an array apart from newline-delimited objects.
 	head, err := br.Peek(64)
@@ -186,6 +201,9 @@ func (e *engine) EvaluateStream(ctx context.Context, r io.Reader) (int, map[stri
 	if err := sc.Err(); err != nil {
 		return events, byRule, fmt.Errorf("read events: %w", err)
 	}
+	if events == 0 && len(head) > 0 {
+		return events, byRule, fmt.Errorf("no events parsed; expected newline-delimited JSON objects or a JSON array")
+	}
 
 	return events, byRule, nil
 }
@@ -195,15 +213,21 @@ func (e *engine) EvaluateStream(ctx context.Context, r io.Reader) (int, map[stri
 // redelivered: this is a tap, not a consumer, and the live subscriber still gets everything
 // captured here.
 func Harvest(ctx context.Context, project, subscription string, limit int, w io.Writer) (int, error) {
-	if limit <= 0 {
-		return 0, fmt.Errorf("limit must be positive, got %d", limit)
-	}
-
 	client, err := pubsub.NewClient(ctx, project)
 	if err != nil {
 		return 0, fmt.Errorf("pubsub.NewClient: %w", err)
 	}
 	defer func() { _ = client.Close() }()
+
+	return harvest(ctx, client.Subscriber(subscription), limit, w)
+}
+
+// harvest is Harvest once a subscriber exists, split out so tests can drive it against a
+// pstest server without reaching through a package-level client constructor.
+func harvest(ctx context.Context, sub *pubsub.Subscriber, limit int, w io.Writer) (int, error) {
+	if limit <= 0 {
+		return 0, fmt.Errorf("limit must be positive, got %d", limit)
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -211,15 +235,32 @@ func Harvest(ctx context.Context, project, subscription string, limit int, w io.
 	var mu sync.Mutex
 	seen := map[string]bool{}
 	written := 0
+	var writeErr error
 
-	sub := client.Subscriber(subscription)
-	// Everything here gets nacked and redelivered, so cap how much is in flight at once.
-	// ponytail: on a subscription quieter than --limit this still spins until --timeout.
+	// Everything here is nacked and comes straight back, so once the subscription stops
+	// yielding message IDs we have not already captured there is nothing left to take.
+	// Stopping then, rather than waiting out the timeout, is what keeps the redelivery
+	// churn (and the delivery-attempt count on every message) short.
+	idle := time.AfterFunc(harvestIdle, cancel)
+	defer idle.Stop()
+
 	sub.ReceiveSettings.MaxOutstandingMessages = limit
 
-	err = sub.Receive(ctx, func(_ context.Context, msg *pubsub.Message) {
+	err := sub.Receive(ctx, func(_ context.Context, msg *pubsub.Message) {
 		// Hand it straight back to the subscription for the real consumer.
 		defer msg.Nack()
+
+		mu.Lock()
+		defer mu.Unlock()
+
+		// Nacked messages come right back to us; only look at each one once. Dedup has
+		// to come first so an unparseable payload is reported once, not on every
+		// redelivery for the rest of the window.
+		if written >= limit || seen[msg.ID] {
+			return
+		}
+		seen[msg.ID] = true
+		idle.Reset(harvestIdle)
 
 		// One event per line, so a payload that arrives pretty-printed cannot split
 		// itself across lines and break the replay.
@@ -230,17 +271,8 @@ func Harvest(ctx context.Context, project, subscription string, limit int, w io.
 		}
 		line.WriteByte('\n')
 
-		mu.Lock()
-		defer mu.Unlock()
-
-		// Nacked messages come right back to us; only count each one once.
-		if written >= limit || seen[msg.ID] {
-			return
-		}
-		seen[msg.ID] = true
-
 		if _, err := w.Write(line.Bytes()); err != nil {
-			log.Println(err)
+			writeErr = err
 			cancel()
 			return
 		}
@@ -250,6 +282,11 @@ func Harvest(ctx context.Context, project, subscription string, limit int, w io.
 			cancel()
 		}
 	})
+
+	// Receive has returned, so every callback has finished and writeErr is settled.
+	if writeErr != nil {
+		return written, fmt.Errorf("write event: %w", writeErr)
+	}
 	// A cancelled or expired context is how this function stops; it is not a failure.
 	if err != nil && ctx.Err() == nil {
 		return written, fmt.Errorf("sub.Receive: %w", err)
@@ -357,6 +394,10 @@ func globFiles(dir string, ext string) ([]string, error) {
 
 	files := []string{}
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
+		// Swallowing this silently drops every policy under an unreadable subdirectory.
+		if err != nil {
+			return err
+		}
 		if filepath.Ext(path) == ext {
 			files = append(files, path)
 		}
@@ -410,6 +451,10 @@ func gcsCompiler(directory string) (*ast.Compiler, error) {
 		policies[objectName] = string(data)
 		log.Printf("Loaded policy %s", objectName)
 
+	}
+
+	if len(policies) == 0 {
+		return nil, fmt.Errorf("no .rego policies found in gs://%s", directory)
 	}
 
 	log.Println("Loaded all policies")

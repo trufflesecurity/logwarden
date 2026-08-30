@@ -56,8 +56,9 @@ the alert channel.
 
 ```bash
 # capture events without consuming them (each one is nacked, so the live
-# deployment still receives everything captured here). Stops at --limit,
-# at --timeout (default 5m), or on ctrl-c. Writes testdata/events.ndjson.
+# deployment still receives them). Stops at --limit, once the subscription
+# stops yielding events it has not already captured, at --timeout (default
+# 5m), or on ctrl-c. Writes testdata/events.ndjson.
 logwarden harvest --project=my-project --subscription=logwarden --limit=1000
 
 # or pull a historical window directly, with no logwarden involvement at all
@@ -90,6 +91,13 @@ diff before.json after.json
 
 Harvested logs land in `testdata/`, which is gitignored — real audit logs should not be
 committed.
+
+> **On `harvest` and dead-letter policies.** `harvest` nacks every message so the live
+> subscriber still receives it, but a nack counts as a failed delivery attempt. If the
+> subscription has a dead-letter policy, messages in flight during a harvest move toward
+> `maxDeliveryAttempts` and can be dead-lettered out of the live stream. On a subscription
+> with a dead-letter policy, prefer `gcloud logging read` above, or point `harvest` at a
+> throwaway subscription on the same topic.
 
 ### GCP Secret format
 

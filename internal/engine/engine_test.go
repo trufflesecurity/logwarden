@@ -30,7 +30,7 @@ func evalOne(t *testing.T, event map[string]any) []result.Result {
 	go func() {
 		got <- <-e.results
 	}()
-	go e.evaluate(ctx, event)
+	go func() { _ = e.evaluate(ctx, event) }()
 
 	select {
 	case results := <-got:

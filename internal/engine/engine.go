@@ -118,7 +118,13 @@ func (e *engine) Subscribe(ctx context.Context, project, subscription string) er
 			msg.Ack()
 			return
 		}
-		e.evaluate(ctx, data)
+		if err := e.evaluate(ctx, data); err != nil {
+			// Unlike unparseable JSON, an evaluation failure may well succeed on a
+			// retry -- and acking it would silently drop an audit event.
+			log.Printf("evaluating message %s: %v", msg.ID, err)
+			msg.Nack()
+			return
+		}
 		atomic.AddInt32(&received, 1)
 		msg.Ack()
 	})
@@ -241,7 +247,11 @@ func harvest(ctx context.Context, sub *pubsub.Subscriber, limit int, w io.Writer
 	// yielding message IDs we have not already captured there is nothing left to take.
 	// Stopping then, rather than waiting out the timeout, is what keeps the redelivery
 	// churn (and the delivery-attempt count on every message) short.
+	// Created stopped: idle time only means anything once something has arrived. Until
+	// the first message the only bound on waiting is the caller's context, so --timeout
+	// governs how long harvest will sit on a quiet subscription.
 	idle := time.AfterFunc(harvestIdle, cancel)
+	idle.Stop()
 	defer idle.Stop()
 
 	sub.ReceiveSettings.MaxOutstandingMessages = limit
@@ -295,16 +305,17 @@ func harvest(ctx context.Context, sub *pubsub.Subscriber, limit int, w io.Writer
 	return written, nil
 }
 
-func (e *engine) evaluate(ctx context.Context, input map[string]interface{}) {
+func (e *engine) evaluate(ctx context.Context, input map[string]interface{}) error {
 	results, err := e.Check(ctx, input)
 	if err != nil {
-		log.Println(err)
-		return
+		return err
 	}
 
 	if len(results) > 0 {
 		e.results <- results
 	}
+
+	return nil
 }
 
 // Check evaluates a single log event against the ruleset and returns any violations.

@@ -122,6 +122,11 @@ func harvest(ctx context.Context) {
 		log.Fatalf("%v (captured %d events, kept at %s)", err, captured, partial)
 	}
 
+	if captured == 0 {
+		_ = os.Remove(partial)
+		log.Fatalf("captured no events from %s; %s left untouched", *subscription, *harvestOutput)
+	}
+
 	if err := os.Rename(partial, *harvestOutput); err != nil {
 		log.Fatal(err)
 	}

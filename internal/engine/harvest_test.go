@@ -23,7 +23,7 @@ const (
 
 // fakeSubscriber stands up an in-process Pub/Sub carrying the given payloads and returns a
 // subscriber attached to it.
-func fakeSubscriber(t *testing.T, payloads ...string) *pubsub.Subscriber {
+func fakeSubscriber(t *testing.T, payloads ...string) (*pubsub.Subscriber, *pstest.Server) {
 	t.Helper()
 
 	// Otherwise every drained-subscription test sits through the real idle window.
@@ -61,7 +61,7 @@ func fakeSubscriber(t *testing.T, payloads ...string) *pubsub.Subscriber {
 		srv.Publish(testTopic, []byte(p), nil)
 	}
 
-	return client.Subscriber(testSub)
+	return client.Subscriber(testSub), srv
 }
 
 func repeat(n int, payload string) []string {
@@ -75,7 +75,7 @@ func repeat(n int, payload string) []string {
 // Every message is nacked and comes straight back, so the limit and the per-message dedup
 // are the only things keeping harvest from writing the same event over and over.
 func TestHarvestStopsAtLimitAndDeduplicates(t *testing.T) {
-	sub := fakeSubscriber(t, repeat(50, `{"insertId":"i"}`)...)
+	sub, _ := fakeSubscriber(t, repeat(50, `{"insertId":"i"}`)...)
 
 	var buf bytes.Buffer
 	n, err := harvest(context.Background(), sub, 10, &buf)
@@ -103,7 +103,7 @@ func (w *failingWriter) Write(p []byte) (int, error) {
 // A write failure used to be swallowed: cancel() made ctx.Err() non-nil, so the Receive
 // error was discarded and harvest reported success over a truncated capture.
 func TestHarvestReportsWriteErrors(t *testing.T) {
-	sub := fakeSubscriber(t, repeat(20, `{"insertId":"i"}`)...)
+	sub, _ := fakeSubscriber(t, repeat(20, `{"insertId":"i"}`)...)
 
 	_, err := harvest(context.Background(), sub, 10, &failingWriter{failAt: 3})
 	if err == nil {
@@ -117,7 +117,7 @@ func TestHarvestReportsWriteErrors(t *testing.T) {
 // With fewer messages than --limit, harvest must return once the subscription stops
 // yielding anything new rather than re-nacking the same few until the timeout.
 func TestHarvestStopsWhenSubscriptionIsDrained(t *testing.T) {
-	sub := fakeSubscriber(t, `{"insertId":"a"}`, `{"insertId":"b"}`)
+	sub, _ := fakeSubscriber(t, `{"insertId":"a"}`, `{"insertId":"b"}`)
 
 	var buf bytes.Buffer
 	n, err := harvest(context.Background(), sub, 500, &buf)
@@ -132,7 +132,7 @@ func TestHarvestStopsWhenSubscriptionIsDrained(t *testing.T) {
 // A payload that is not JSON must be reported once, not on every redelivery for the rest
 // of the window, and must not stop the messages around it being captured.
 func TestHarvestSkipsUnparseablePayloadOnce(t *testing.T) {
-	sub := fakeSubscriber(t, `{"insertId":"a"}`, `not json`, `{"insertId":"b"}`)
+	sub, _ := fakeSubscriber(t, `{"insertId":"a"}`, `not json`, `{"insertId":"b"}`)
 
 	var buf bytes.Buffer
 	n, err := harvest(context.Background(), sub, 500, &buf)
@@ -147,5 +147,29 @@ func TestHarvestSkipsUnparseablePayloadOnce(t *testing.T) {
 func TestHarvestRejectsNonPositiveLimit(t *testing.T) {
 	if _, err := harvest(context.Background(), nil, 0, &bytes.Buffer{}); err == nil {
 		t.Fatal("expected an error for limit 0")
+	}
+}
+
+// The idle timer must not run before anything has arrived. It used to be armed as soon as
+// Receive started, so a subscription that was quiet for harvestIdle gave up with zero
+// events -- and --timeout never governed the wait for the first one.
+func TestHarvestWaitsForTheFirstMessage(t *testing.T) {
+	sub, srv := fakeSubscriber(t)
+
+	go func() {
+		time.Sleep(4 * harvestIdle)
+		srv.Publish(testTopic, []byte(`{"insertId":"late"}`), nil)
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 40*harvestIdle)
+	defer cancel()
+
+	var buf bytes.Buffer
+	n, err := harvest(ctx, sub, 500, &buf)
+	if err != nil {
+		t.Fatalf("harvest: %v", err)
+	}
+	if n != 1 {
+		t.Errorf("captured %d, want 1: harvest gave up before the first message arrived", n)
 	}
 }

@@ -1,0 +1,2 @@
+{"insertId":"a","protoPayload":{"methodName":"test.probe.Fire","authenticationInfo":{"principalEmail":"alice@example.com"}}}
+{"insertId":"b","protoPayload":{"methodName":"test.probe.Ignore","authenticationInfo":{"principalEmail":"bob@example.com"}}}

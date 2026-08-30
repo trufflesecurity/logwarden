@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,7 +12,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
+	"time"
 
 	"cloud.google.com/go/pubsub/v2"
 	"cloud.google.com/go/storage"
@@ -20,6 +24,14 @@ import (
 	"github.com/trufflesecurity/logwarden/internal/result"
 	"google.golang.org/api/iterator"
 )
+
+// maxEventBytes caps a single newline-delimited log event. Audit log entries routinely
+// exceed bufio.Scanner's 64KiB default.
+const maxEventBytes = 16 * 1024 * 1024
+
+// harvestIdle is how long Harvest waits for a message it has not already captured before
+// deciding the subscription has nothing more to give. A var so tests need not wait it out.
+var harvestIdle = 15 * time.Second
 
 func New(ctx context.Context, policyPath string, outputs []outputs.Output, printAll bool) (*engine, error) {
 	var compiler *ast.Compiler
@@ -65,17 +77,22 @@ type engine struct {
 
 func (e *engine) Alert(ctx context.Context) error {
 	for res := range e.results {
-		for _, r := range res {
-			for _, o := range e.outputs {
-				err := o.Send(ctx, r)
-				if err != nil {
-					log.Println(err)
-				}
-			}
-		}
+		e.report(ctx, res)
 	}
 
 	return nil
+}
+
+// report fans a batch of violations out to every enabled output.
+func (e *engine) report(ctx context.Context, res []result.Result) {
+	for _, r := range res {
+		for _, o := range e.outputs {
+			err := o.Send(ctx, r)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	}
 }
 
 // subscribe subscribes to a Pub/Sub subscription and evaluates each message against the ruleset.
@@ -95,11 +112,19 @@ func (e *engine) Subscribe(ctx context.Context, project, subscription string) er
 		}
 
 		var data map[string]interface{}
-		err = json.Unmarshal(msg.Data, &data)
-		if err != nil {
-			log.Fatal(err)
+		if err := json.Unmarshal(msg.Data, &data); err != nil {
+			// One malformed message must not take down the daemon.
+			log.Printf("skipping message %s: %v", msg.ID, err)
+			msg.Ack()
+			return
 		}
-		e.evaluate(ctx, data)
+		if err := e.evaluate(ctx, data); err != nil {
+			// Unlike unparseable JSON, an evaluation failure may well succeed on a
+			// retry -- and acking it would silently drop an audit event.
+			log.Printf("evaluating message %s: %v", msg.ID, err)
+			msg.Nack()
+			return
+		}
 		atomic.AddInt32(&received, 1)
 		msg.Ack()
 	})
@@ -110,25 +135,208 @@ func (e *engine) Subscribe(ctx context.Context, project, subscription string) er
 	return nil
 }
 
-func (e *engine) evaluate(ctx context.Context, input map[string]interface{}) {
-	results, err := e.ruleset.Eval(ctx, rego.EvalInput(input))
-	if err != nil {
-		log.Fatal(err)
+// EvaluateStream replays log events from r against the ruleset, reporting violations to the
+// configured outputs. It accepts newline-delimited JSON objects (what Pub/Sub delivers and
+// what Harvest writes) or a single JSON array (what `gcloud logging read --format=json`
+// emits). It returns the number of events seen and a per-rule violation count.
+//
+// ponytail: a JSON array is buffered whole; feed NDJSON for dumps too large to hold in memory.
+func (e *engine) EvaluateStream(ctx context.Context, r io.Reader) (int, map[string]int, error) {
+	events := 0
+	byRule := map[string]int{}
+
+	check := func(input map[string]interface{}) {
+		events++
+		if e.printAll {
+			if raw, err := json.Marshal(input); err == nil {
+				fmt.Println(string(raw))
+			}
+		}
+		results, err := e.Check(ctx, input)
+		if err != nil {
+			log.Printf("event %d: %v", events, err)
+			return
+		}
+		for _, res := range results {
+			byRule[res.Rule]++
+		}
+		e.report(ctx, results)
 	}
 
-	for _, res := range results {
-		body, err := json.MarshalIndent(res.Bindings["x"], "", "  ")
+	br := bufio.NewReaderSize(r, 64*1024)
+
+	// A UTF-8 BOM would otherwise be read as the first event's opening byte.
+	if b, _ := br.Peek(3); bytes.Equal(b, []byte("\xef\xbb\xbf")) {
+		_, _ = br.Discard(3)
+	}
+
+	// Peek (without consuming) to tell an array apart from newline-delimited objects.
+	head, err := br.Peek(64)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return events, byRule, fmt.Errorf("read events: %w", err)
+	}
+	head = bytes.TrimLeft(head, " \t\r\n")
+
+	if len(head) > 0 && head[0] == '[' {
+		batch := []map[string]interface{}{}
+		if err := json.NewDecoder(br).Decode(&batch); err != nil {
+			return events, byRule, fmt.Errorf("decode event array: %w", err)
+		}
+		for _, input := range batch {
+			check(input)
+		}
+		return events, byRule, nil
+	}
+
+	sc := bufio.NewScanner(br)
+	sc.Buffer(make([]byte, 0, 64*1024), maxEventBytes)
+	for line := 0; sc.Scan(); {
+		line++
+		raw := bytes.TrimSpace(sc.Bytes())
+		if len(raw) == 0 {
+			continue
+		}
+		var input map[string]interface{}
+		if err := json.Unmarshal(raw, &input); err != nil {
+			// Skip the bad line rather than abandoning the rest of the dump.
+			log.Printf("skipping malformed event on line %d: %v", line, err)
+			continue
+		}
+		check(input)
+	}
+	if err := sc.Err(); err != nil {
+		return events, byRule, fmt.Errorf("read events: %w", err)
+	}
+	if events == 0 && len(head) > 0 {
+		return events, byRule, fmt.Errorf("no events parsed; expected newline-delimited JSON objects or a JSON array")
+	}
+
+	return events, byRule, nil
+}
+
+// Harvest taps a Pub/Sub subscription and writes up to limit raw messages to w, one JSON
+// object per line, for replaying with EvaluateStream. Every message is nacked so it is
+// redelivered: this is a tap, not a consumer, and the live subscriber still gets everything
+// captured here.
+func Harvest(ctx context.Context, project, subscription string, limit int, w io.Writer) (int, error) {
+	client, err := pubsub.NewClient(ctx, project)
+	if err != nil {
+		return 0, fmt.Errorf("pubsub.NewClient: %w", err)
+	}
+	defer func() { _ = client.Close() }()
+
+	return harvest(ctx, client.Subscriber(subscription), limit, w)
+}
+
+// harvest is Harvest once a subscriber exists, split out so tests can drive it against a
+// pstest server without reaching through a package-level client constructor.
+func harvest(ctx context.Context, sub *pubsub.Subscriber, limit int, w io.Writer) (int, error) {
+	if limit <= 0 {
+		return 0, fmt.Errorf("limit must be positive, got %d", limit)
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var mu sync.Mutex
+	seen := map[string]bool{}
+	written := 0
+	var writeErr error
+
+	// Everything here is nacked and comes straight back, so once the subscription stops
+	// yielding message IDs we have not already captured there is nothing left to take.
+	// Stopping then, rather than waiting out the timeout, is what keeps the redelivery
+	// churn (and the delivery-attempt count on every message) short.
+	// Created stopped: idle time only means anything once something has arrived. Until
+	// the first message the only bound on waiting is the caller's context, so --timeout
+	// governs how long harvest will sit on a quiet subscription.
+	idle := time.AfterFunc(harvestIdle, cancel)
+	idle.Stop()
+	defer idle.Stop()
+
+	sub.ReceiveSettings.MaxOutstandingMessages = limit
+
+	err := sub.Receive(ctx, func(_ context.Context, msg *pubsub.Message) {
+		// Hand it straight back to the subscription for the real consumer.
+		defer msg.Nack()
+
+		mu.Lock()
+		defer mu.Unlock()
+
+		// Nacked messages come right back to us; only look at each one once. Dedup has
+		// to come first so an unparseable payload is reported once, not on every
+		// redelivery for the rest of the window.
+		if written >= limit || seen[msg.ID] {
+			return
+		}
+		seen[msg.ID] = true
+		idle.Reset(harvestIdle)
+
+		// One event per line, so a payload that arrives pretty-printed cannot split
+		// itself across lines and break the replay.
+		var line bytes.Buffer
+		if err := json.Compact(&line, msg.Data); err != nil {
+			log.Printf("skipping message %s: %v", msg.ID, err)
+			return
+		}
+		line.WriteByte('\n')
+
+		if _, err := w.Write(line.Bytes()); err != nil {
+			writeErr = err
+			cancel()
+			return
+		}
+
+		written++
+		if written >= limit {
+			cancel()
+		}
+	})
+
+	// Receive has returned, so every callback has finished and writeErr is settled.
+	if writeErr != nil {
+		return written, fmt.Errorf("write event: %w", writeErr)
+	}
+	// A cancelled or expired context is how this function stops; it is not a failure.
+	if err != nil && ctx.Err() == nil {
+		return written, fmt.Errorf("sub.Receive: %w", err)
+	}
+
+	return written, nil
+}
+
+func (e *engine) evaluate(ctx context.Context, input map[string]interface{}) error {
+	results, err := e.Check(ctx, input)
+	if err != nil {
+		return err
+	}
+
+	if len(results) > 0 {
+		e.results <- results
+	}
+
+	return nil
+}
+
+// Check evaluates a single log event against the ruleset and returns any violations.
+func (e *engine) Check(ctx context.Context, input map[string]interface{}) ([]result.Result, error) {
+	evaluated, err := e.ruleset.Eval(ctx, rego.EvalInput(input))
+	if err != nil {
+		return nil, fmt.Errorf("rego eval: %w", err)
+	}
+
+	results := []result.Result{}
+
+	for _, res := range evaluated {
+		body, err := json.Marshal(res.Bindings["x"])
 		if err != nil {
-			log.Fatal(err)
+			return nil, fmt.Errorf("marshal bindings: %w", err)
 		}
 
 		resRaw := resultRaw{}
-		err = json.Unmarshal(body, &resRaw)
-		if err != nil {
-			log.Fatal(err)
+		if err := json.Unmarshal(body, &resRaw); err != nil {
+			return nil, fmt.Errorf("unmarshal bindings: %w", err)
 		}
-
-		results := []result.Result{}
 
 		for rule, checkData := range resRaw {
 			for ruleType, violations := range checkData {
@@ -144,11 +352,9 @@ func (e *engine) evaluate(ctx context.Context, input map[string]interface{}) {
 				}
 			}
 		}
-
-		if len(results) > 0 {
-			e.results <- results
-		}
 	}
+
+	return results, nil
 }
 
 func flattenViolationSlice(v []violation) violation {
@@ -186,6 +392,12 @@ func localCompiler(directory string) (*ast.Compiler, error) {
 		log.Printf("Loaded policy %s", fn)
 	}
 
+	// An empty ruleset compiles fine and then silently matches nothing, which reads as
+	// "no violations" instead of "wrong --policies path".
+	if len(policies) == 0 {
+		return nil, fmt.Errorf("no .rego policies found in %q", directory)
+	}
+
 	return ast.CompileModules(policies)
 }
 
@@ -193,6 +405,10 @@ func globFiles(dir string, ext string) ([]string, error) {
 
 	files := []string{}
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
+		// Swallowing this silently drops every policy under an unreadable subdirectory.
+		if err != nil {
+			return err
+		}
 		if filepath.Ext(path) == ext {
 			files = append(files, path)
 		}
@@ -246,6 +462,10 @@ func gcsCompiler(directory string) (*ast.Compiler, error) {
 		policies[objectName] = string(data)
 		log.Printf("Loaded policy %s", objectName)
 
+	}
+
+	if len(policies) == 0 {
+		return nil, fmt.Errorf("no .rego policies found in gs://%s", directory)
 	}
 
 	log.Println("Loaded all policies")

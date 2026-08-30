@@ -1,10 +1,15 @@
 package engine
 
 import (
+	"bytes"
 	"context"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/trufflesecurity/logwarden/internal/outputs"
 	"github.com/trufflesecurity/logwarden/internal/result"
 )
 
@@ -25,7 +30,7 @@ func evalOne(t *testing.T, event map[string]any) []result.Result {
 	go func() {
 		got <- <-e.results
 	}()
-	go e.evaluate(ctx, event)
+	go func() { _ = e.evaluate(ctx, event) }()
 
 	select {
 	case results := <-got:
@@ -127,5 +132,131 @@ func TestEvaluateMitreHelpersRule(t *testing.T) {
 	}
 	if got, want := r.Details["granted"], true; got != want {
 		t.Errorf("Details[granted] = %v, want %v", got, want)
+	}
+}
+
+type capture struct{ got []result.Result }
+
+func (c *capture) Send(_ context.Context, res result.Result) error {
+	c.got = append(c.got, res)
+	return nil
+}
+
+func newTestEngine(t *testing.T) (*engine, *capture) {
+	t.Helper()
+
+	got := &capture{}
+	eng, err := New(context.Background(), filepath.Join("testdata", "policy"), []outputs.Output{got}, false)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	return eng, got
+}
+
+// The probe policy fires on exactly one of the two fixture events, in both input shapes.
+func TestEvaluateStream(t *testing.T) {
+	for _, name := range []string{"events.ndjson", "events.json"} {
+		name := name
+		t.Run(name, func(t *testing.T) {
+			eng, got := newTestEngine(t)
+
+			raw, err := os.ReadFile(filepath.Join("testdata", name))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			events, byRule, err := eng.EvaluateStream(context.Background(), bytes.NewReader(raw))
+			if err != nil {
+				t.Fatalf("EvaluateStream: %v", err)
+			}
+
+			if events != 2 {
+				t.Errorf("events = %d, want 2", events)
+			}
+			if byRule["probe"] != 1 {
+				t.Errorf("byRule = %v, want probe:1", byRule)
+			}
+			if len(got.got) != 1 {
+				t.Fatalf("sent %d results, want 1: %v", len(got.got), got.got)
+			}
+
+			res := got.got[0]
+			if res.Rule != "probe" || res.Type != "violation" || res.Message != "probe fired" {
+				t.Errorf("got %+v", res)
+			}
+			if res.Details["actor"] != "alice@example.com" {
+				t.Errorf("actor = %v, want alice@example.com", res.Details["actor"])
+			}
+		})
+	}
+}
+
+// A corrupt line in a dump must not abandon the events after it.
+func TestEvaluateStreamSkipsMalformedLines(t *testing.T) {
+	eng, got := newTestEngine(t)
+
+	in := strings.Join([]string{
+		`{"protoPayload":{"methodName":"test.probe.Fire","authenticationInfo":{"principalEmail":"alice@example.com"}}}`,
+		`{"protoPayload":{"methodName":`,
+		``,
+		`{"protoPayload":{"methodName":"test.probe.Fire","authenticationInfo":{"principalEmail":"carol@example.com"}}}`,
+	}, "\n")
+
+	events, byRule, err := eng.EvaluateStream(context.Background(), strings.NewReader(in))
+	if err != nil {
+		t.Fatalf("EvaluateStream: %v", err)
+	}
+
+	if events != 2 {
+		t.Errorf("events = %d, want 2 (the malformed and blank lines skipped)", events)
+	}
+	if byRule["probe"] != 2 || len(got.got) != 2 {
+		t.Errorf("byRule = %v, sent %d results, want 2 of each", byRule, len(got.got))
+	}
+}
+
+// An empty or wrong --policies path must fail loudly instead of matching nothing.
+func TestNewRejectsEmptyPolicyDir(t *testing.T) {
+	if _, err := New(context.Background(), t.TempDir(), nil, false); err == nil {
+		t.Fatal("expected an error for a directory with no .rego files")
+	}
+}
+
+// A UTF-8 BOM used to be read as the first event's opening byte, which dropped event one
+// from an NDJSON dump and made a JSON array parse as zero events with no error at all.
+func TestEvaluateStreamSkipsBOM(t *testing.T) {
+	for _, name := range []string{"events.ndjson", "events.json"} {
+		t.Run(name, func(t *testing.T) {
+			eng, got := newTestEngine(t)
+
+			raw, err := os.ReadFile(filepath.Join("testdata", name))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			events, _, err := eng.EvaluateStream(context.Background(),
+				bytes.NewReader(append([]byte("\xef\xbb\xbf"), raw...)))
+			if err != nil {
+				t.Fatalf("EvaluateStream: %v", err)
+			}
+			if events != 2 || len(got.got) != 1 {
+				t.Errorf("events = %d, results = %d; want 2 and 1", events, len(got.got))
+			}
+		})
+	}
+}
+
+// Input that parses to nothing is a format mistake. Reporting it as a clean zero-violation
+// run would read as "this rule is quiet" to anyone using eval as a gate.
+func TestEvaluateStreamRejectsUnparseableInput(t *testing.T) {
+	eng, _ := newTestEngine(t)
+
+	if _, _, err := eng.EvaluateStream(context.Background(), strings.NewReader("not json\n")); err == nil {
+		t.Fatal("expected an error when no events could be parsed")
+	}
+
+	// An genuinely empty stream is not an error.
+	if _, _, err := eng.EvaluateStream(context.Background(), strings.NewReader("  \n")); err != nil {
+		t.Fatalf("empty input: %v", err)
 	}
 }

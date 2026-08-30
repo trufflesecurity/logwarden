@@ -11,7 +11,7 @@ The included policies may be noisy for your organization and adjustment of them 
 
 ```bash
 $ logwarden --help
-usage: logwarden --project=PROJECT --subscription=SUBSCRIPTION [<flags>]
+usage: logwarden [<flags>] <command> [<args> ...]
 
 Logwarden is a tool to audit GCP logs against a set of rego policies.
 
@@ -19,7 +19,7 @@ Logwarden is a tool to audit GCP logs against a set of rego policies.
 Flags:
   --[no-]help                  Show context-sensitive help (also try --help-long
                                and --help-man).
-  --policies="policies"        Path to policies folder.
+  --policies="policy"          Path to policies folder.
   --project=PROJECT            GCP Project ID.
   --subscription=SUBSCRIPTION  Pub/Sub subscription to audit.
   --secret-name="logwarden"    GCP Secret name to use for GCP Auditor.
@@ -27,7 +27,69 @@ Flags:
   --[no-]print-all             Output all logs that are processed.
   --[no-]slack-webhook         Enable Slack webhook.
   --[no-]webhook               Enable JSON HTTP POST webhook output.
+
+Commands:
+help [<command>...]
+    Show help.
+
+run*
+    Audit a live Pub/Sub subscription and alert on violations.
+
+eval [<events>]
+    Replay saved log events against the policies. Prints to stdout only,
+    never alerts.
+
+harvest [<flags>] [<output>]
+    Capture log events off Pub/Sub into a file to replay with eval.
 ```
+
+`run` is the default command, so `logwarden --project=... --subscription=...` behaves
+exactly as it always has.
+
+## Testing rules without paging anyone
+
+A new or edited policy can be far noisier than it looks. Rather than deploying it and
+watching the alert channel, capture a dump of real events once and replay it locally.
+`eval` compiles the policies, evaluates every event, and prints to stdout only — it never
+opens a Slack webhook or reads a secret, so there is no way for a half-baked rule to reach
+the alert channel.
+
+```bash
+# capture events without consuming them (each one is nacked, so the live
+# deployment still receives everything captured here). Stops at --limit,
+# at --timeout (default 5m), or on ctrl-c. Writes testdata/events.ndjson.
+logwarden harvest --project=my-project --subscription=logwarden --limit=1000
+
+# or pull a historical window directly, with no logwarden involvement at all
+gcloud logging read 'timestamp>="2026-08-01T00:00:00Z"' --format=json --limit=1000 > testdata/events.json
+
+# replay it: no credentials, no Pub/Sub, no alerts
+logwarden eval --policies=policy/gcp testdata/events.ndjson
+```
+
+The per-rule tally on stderr is the number that matters — it is how many messages that rule
+would have posted to your alert channel over the captured window:
+
+```
+1204 events, 37 violations
+  mitre_discovery         22
+  service_account_keys     9
+  firewall_rule_created    6
+```
+
+`eval` reads newline-delimited JSON (what `harvest` writes) or a single JSON array (what
+`gcloud logging read --format=json` emits). With no file argument it reads stdin. To measure
+the effect of a change to an existing rule, diff two runs:
+
+```bash
+logwarden eval --json testdata/events.ndjson > before.json
+$EDITOR policy/gcp/some_rule.rego
+logwarden eval --json testdata/events.ndjson > after.json
+diff before.json after.json
+```
+
+Harvested logs land in `testdata/`, which is gitignored — real audit logs should not be
+committed.
 
 ### GCP Secret format
 

@@ -1,5 +1,5 @@
 our_policies
-testdata
+/testdata/
 .terraform
 .terraform.lock.hcl
 dist

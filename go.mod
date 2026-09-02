@@ -9,7 +9,7 @@ require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/fatih/color v1.19.0
 	github.com/joho/godotenv v1.5.1
-	github.com/open-policy-agent/opa v1.20.0
+	github.com/open-policy-agent/opa v1.20.1
 	github.com/pkg/errors v0.9.1
 	golang.org/x/text v0.41.0
 	google.golang.org/api v0.294.0

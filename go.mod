@@ -5,7 +5,7 @@ go 1.27.0
 require (
 	cloud.google.com/go/pubsub/v2 v2.7.0
 	cloud.google.com/go/secretmanager v1.21.0
-	cloud.google.com/go/storage v1.66.0
+	cloud.google.com/go/storage v1.67.0
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/fatih/color v1.19.0
 	github.com/joho/godotenv v1.5.1

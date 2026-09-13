@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/trufflesecurity/logwarden/internal/result"
 	"golang.org/x/text/cases"
@@ -38,9 +39,16 @@ func (o Slack) Send(ctx context.Context, res result.Result) error {
 	if err != nil {
 		return err
 	}
-	resp, err := http.Post(o.WebhookURL, "application/json", bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, o.WebhookURL, bytes.NewBuffer(body))
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid Slack webhook configuration")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	resp, err := client.Do(req)
+	if err != nil {
+		// A webhook URL contains credentials; never include it in output error logs.
+		return fmt.Errorf("Slack webhook request failed (%T)", err)
 	}
 	_ = resp.Body.Close()
 	if resp.StatusCode != 200 {

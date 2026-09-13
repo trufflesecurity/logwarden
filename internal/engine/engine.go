@@ -50,7 +50,7 @@ func New(ctx context.Context, policyPath string, outputs []outputs.Output, print
 
 	return &engine{
 		ruleset:  rules,
-		results:  make(chan []result.Result),
+		results:  make(chan deliveryBatch),
 		outputs:  outputs,
 		printAll: printAll,
 	}, nil
@@ -58,24 +58,37 @@ func New(ctx context.Context, policyPath string, outputs []outputs.Output, print
 
 type engine struct {
 	ruleset  rego.PreparedEvalQuery
-	results  chan []result.Result
+	results  chan deliveryBatch
 	outputs  []outputs.Output
 	printAll bool
 }
 
+type deliveryBatch struct {
+	ctx     context.Context
+	results []result.Result
+	done    chan error
+}
+
 func (e *engine) Alert(ctx context.Context) error {
-	for res := range e.results {
-		for _, r := range res {
-			for _, o := range e.outputs {
-				err := o.Send(ctx, r)
-				if err != nil {
-					log.Println(err)
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case batch, ok := <-e.results:
+			if !ok {
+				return nil
+			}
+			var deliveryErr error
+			for _, r := range batch.results {
+				for _, o := range e.outputs {
+					if err := o.Send(batch.ctx, r); err != nil && deliveryErr == nil {
+						deliveryErr = fmt.Errorf("output delivery: %w", err)
+					}
 				}
 			}
+			batch.done <- deliveryErr
 		}
 	}
-
-	return nil
 }
 
 // subscribe subscribes to a Pub/Sub subscription and evaluates each message against the ruleset.
@@ -89,17 +102,22 @@ func (e *engine) Subscribe(ctx context.Context, project, subscription string) er
 	sub := client.Subscription(subscription)
 
 	var received int32
-	err = sub.Receive(ctx, func(_ context.Context, msg *pubsub.Message) {
+	err = sub.Receive(ctx, func(messageCtx context.Context, msg *pubsub.Message) {
 		if e.printAll {
 			fmt.Println(string(msg.Data))
 		}
 
 		var data map[string]interface{}
-		err = json.Unmarshal(msg.Data, &data)
-		if err != nil {
-			log.Fatal(err)
+		if err := json.Unmarshal(msg.Data, &data); err != nil || data == nil {
+			log.Println("Invalid Pub/Sub JSON object; retaining message for retry")
+			msg.Nack()
+			return
 		}
-		e.evaluate(ctx, data)
+		if err := e.evaluate(messageCtx, data); err != nil {
+			log.Printf("Evaluation or delivery failed; retaining message for retry: %v", err)
+			msg.Nack()
+			return
+		}
 		atomic.AddInt32(&received, 1)
 		msg.Ack()
 	})
@@ -110,22 +128,22 @@ func (e *engine) Subscribe(ctx context.Context, project, subscription string) er
 	return nil
 }
 
-func (e *engine) evaluate(ctx context.Context, input map[string]interface{}) {
+func (e *engine) evaluate(ctx context.Context, input map[string]interface{}) error {
 	results, err := e.ruleset.Eval(ctx, rego.EvalInput(input))
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("evaluate policy: %w", err)
 	}
 
 	for _, res := range results {
 		body, err := json.MarshalIndent(res.Bindings["x"], "", "  ")
 		if err != nil {
-			log.Fatal(err)
+			return fmt.Errorf("encode policy results: %w", err)
 		}
 
 		resRaw := resultRaw{}
 		err = json.Unmarshal(body, &resRaw)
 		if err != nil {
-			log.Fatal(err)
+			return fmt.Errorf("decode policy results: %w", err)
 		}
 
 		results := []result.Result{}
@@ -146,9 +164,23 @@ func (e *engine) evaluate(ctx context.Context, input map[string]interface{}) {
 		}
 
 		if len(results) > 0 {
-			e.results <- results
+			batch := deliveryBatch{ctx: ctx, results: results, done: make(chan error, 1)}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case e.results <- batch:
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case err := <-batch.done:
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
+	return nil
 }
 
 func flattenViolationSlice(v []violation) violation {

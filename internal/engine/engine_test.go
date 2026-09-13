@@ -28,7 +28,9 @@ func evalOne(t *testing.T, event map[string]any) []result.Result {
 
 	got := make(chan []result.Result, 1)
 	go func() {
-		got <- <-e.results
+		batch := <-e.results
+		got <- batch.results
+		batch.done <- nil
 	}()
 	go func() { _ = e.evaluate(ctx, event) }()
 

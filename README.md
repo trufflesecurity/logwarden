@@ -101,6 +101,9 @@ committed.
 
 ### GCP Secret format
 
+For optional durable Slack deduplication and expiring exact-match exceptions,
+see [notification suppression](NOTIFICATIONS.md).
+
 ```
 SLACK_WEBHOOK=https://hooks.slack.com/services/TELXXXXXX/XXXXXXXXX/XXXXXXXXXXXXXXXXX
 

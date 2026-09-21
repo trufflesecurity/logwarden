@@ -12,7 +12,7 @@ require (
 	github.com/open-policy-agent/opa v1.20.1
 	github.com/pkg/errors v0.9.1
 	golang.org/x/text v0.41.0
-	google.golang.org/api v0.294.0
+	google.golang.org/api v0.298.0
 	google.golang.org/grpc v1.83.2
 )
 

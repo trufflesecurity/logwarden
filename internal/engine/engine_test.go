@@ -3,6 +3,8 @@ package engine
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -129,5 +131,22 @@ func TestEvaluateCancellationAndMalformedPolicyReturnErrors(t *testing.T) {
 	malformed := testEngine(t, "package test\nviolation := 123")
 	if err := malformed.evaluate(context.Background(), map[string]interface{}{}); err == nil {
 		t.Fatal("malformed policy result did not return an error")
+	}
+}
+
+func TestProductionPoliciesCompile(t *testing.T) {
+	policyDir := os.Getenv("LOGWARDEN_POLICY_TEST_DIR")
+	if policyDir == "" {
+		t.Skip("set LOGWARDEN_POLICY_TEST_DIR to a production policy snapshot")
+	}
+	if _, err := os.Stat(filepath.Join(policyDir, "cloud-sql-connect.rego")); err != nil {
+		t.Fatal(err)
+	}
+	eng, err := New(context.Background(), policyDir, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := eng.ruleset.Eval(context.Background(), rego.EvalInput(map[string]interface{}{})); err != nil {
+		t.Fatal(err)
 	}
 }

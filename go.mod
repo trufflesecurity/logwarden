@@ -1,6 +1,6 @@
 module github.com/trufflesecurity/logwarden
 
-go 1.27.0
+go 1.27.3
 
 require (
 	cloud.google.com/go/pubsub/v2 v2.7.0
@@ -11,7 +11,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/open-policy-agent/opa v1.20.1
 	github.com/pkg/errors v0.9.1
-	golang.org/x/text v0.41.0
+	golang.org/x/text v0.42.0
 	google.golang.org/api v0.294.0
 	google.golang.org/grpc v1.83.2
 )
@@ -78,11 +78,11 @@ require (
 	go.opentelemetry.io/otel/trace v1.46.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
-	golang.org/x/net v0.58.0 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto v0.0.0-20260825221802-da73d73af1c5 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260825221802-da73d73af1c5 // indirect

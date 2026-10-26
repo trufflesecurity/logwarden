@@ -146,7 +146,7 @@ func TestProductionPoliciesCompile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := eng.ruleset.Eval(context.Background(), rego.EvalInput(map[string]interface{}{})); err != nil {
+	if err := eng.evaluate(context.Background(), map[string]interface{}{}); err != nil {
 		t.Fatal(err)
 	}
 }
